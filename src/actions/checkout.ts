@@ -17,6 +17,7 @@ export class Checkout extends Action {
 
 	public bind(job: Job): Step {
 		return job.addStep(this.id, {
+			name: this.name,
 			uses: `actions/checkout@${this.version}`,
 			with: {
 				repository: this.repository,

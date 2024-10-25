@@ -1,9 +1,20 @@
 import type { Job } from "./job";
+import type { Step } from "./step";
 
 /**
  * Properties required to configure an Action.
  */
 export interface ActionProps {
+	/**
+	 * Optional name of the action to describe its function in the workflow.
+	 *
+	 * This name appears in GitHub Actions logs and provides a high-level
+	 * description of what the action does.
+	 *
+	 * @example "Checkout Repository"
+	 */
+	readonly name?: string;
+
 	/**
 	 * The version of the action to use.
 	 *
@@ -41,6 +52,11 @@ export abstract class Action {
 	public readonly id: string;
 
 	/**
+	 * Optional name of the action for display in workflow logs.
+	 */
+	public readonly name?: string;
+
+	/**
 	 * The version of the action to be used in the workflow.
 	 */
 	public readonly version: string;
@@ -55,6 +71,7 @@ export abstract class Action {
 	 */
 	constructor(id: string, props: ActionProps) {
 		this.id = id;
+		this.name = props.name;
 		this.version = props.version;
 	}
 
@@ -68,5 +85,5 @@ export abstract class Action {
 	 * Binding associates the action's functionality and configuration
 	 * with the job, integrating it into the workflow.
 	 */
-	public abstract bind(job: Job): void;
+	public abstract bind(job: Job): Step;
 }

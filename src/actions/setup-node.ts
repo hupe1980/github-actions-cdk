@@ -24,7 +24,8 @@ export class SetupNode extends Action {
 
 	public bind(job: Job): Step {
 		return job.addStep(this.id, {
-			uses: `actions/checkout@${this.version}`,
+			name: this.name,
+			uses: `actions/setup-node@${this.version}`,
 			with: {
 				"node-version": this.nodeVersion,
 			},

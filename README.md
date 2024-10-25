@@ -27,10 +27,10 @@ yarn add github-actions-cdk
 
 ### Basic Usage
 
-Here’s a simple example of how to create a GitHub Actions workflow using `github-actions-cdk`:
+Here's a simple example of how to create a GitHub Actions workflow using `github-actions-cdk`:
 
 ```typescript
-import { Project, Workflow } from 'github-actions-cdk';
+import { PermissionLevel, Project, Workflow } from 'github-actions-cdk';
 import { Checkout } from 'github-actions-cdk/actions';
 
 const project = new Project();
@@ -41,7 +41,7 @@ const workflow = new Workflow(project, 'build', {
         workflowDispatch: {}
     },
     permissions: {
-        contents: 'read'
+        contents: PermissionLevel.READ,
     }
 });
 
