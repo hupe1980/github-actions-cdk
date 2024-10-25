@@ -30,7 +30,7 @@ Thank you for considering contributing to **github-actions-cdk**! We welcome con
 
 ## Code of Conduct
 
-We expect all contributors to adhere to the [Code of Conduct](CODE_OF_CONDUCT.md) for our community. Please treat everyone with respect and kindness.
+We expect all contributors to adhere to the [Code of Conduct](./CODE_OF_CONDUCT.md) for our community. Please treat everyone with respect and kindness.
 
 ## How to Contribute
 
@@ -72,7 +72,7 @@ We welcome feature requests! If you have an idea for a new feature or enhancemen
 
 ## License
 
-By contributing to **github-actions-cdk**, you agree that your contributions will be licensed under the MIT License. See the [LICENSE](LICENCE_md) file for more information.
+By contributing to **github-actions-cdk**, you agree that your contributions will be licensed under the MIT License. See the [LICENSE](./LICENCE_md) file for more information.
 
 ---
 

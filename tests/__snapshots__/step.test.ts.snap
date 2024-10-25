@@ -1,0 +1,25 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Step should create a step with all properties 1`] = `
+{
+  "id": "TestStepWithAllProps",
+  "if": "success()",
+  "name": "Build Project",
+  "run": undefined,
+  "uses": "actions/setup-node@v2",
+  "with": {
+    "version": "14",
+  },
+}
+`;
+
+exports[`Step should create a step with minimal properties 1`] = `
+{
+  "id": "TestStep",
+  "if": undefined,
+  "name": "Install dependencies",
+  "run": "npm install",
+  "uses": undefined,
+  "with": undefined,
+}
+`;

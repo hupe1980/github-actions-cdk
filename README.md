@@ -62,8 +62,8 @@ project.synth();
 
 ## Contributing
 
-Contributions are welcome! Please read the [CONTRIBUTING.md](link-to-contributing-guidelines) for details on how to get involved.
+Contributions are welcome! Please read the [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to get involved.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENCE.md) file for more information.
+This project is licensed under the MIT License. See the [LICENSE](./LICENCE.md) file for more information.
