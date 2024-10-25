@@ -4,11 +4,10 @@
       "module": "commonjs",
       "lib": ["es2019"],
       "declaration": true,
-      "outDir": "dist",
-      "rootDir": ".",
+      "outDir": "lib",
       "strict": true,
       "esModuleInterop": false,
     },
-    "include": ["src/**/*", "example/**/*"],
-    "exclude": ["node_modules", "dist"]
+    "include": ["src"],
+    "exclude": ["node_modules", "lib"]
   }
