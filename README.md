@@ -1,33 +1,41 @@
 # 🚧 GitHub Actions CDK
 
-**github-actions-cdk** is a TypeScript library that simplifies the creation and management of GitHub Actions workflows using Constructs. With this library, developers can define workflows in a structured and type-safe manner, making it easier to automate CI/CD pipelines on GitHub.
+**github-actions-cdk** is a TypeScript library that simplifies the creation and management of GitHub Actions workflows using Constructs. With this library, developers can define workflows in a structured and type-safe manner, making it easier to automate CI/CD pipelines on GitHub. It also includes Python bindings for developers who prefer working in Python.
 
 ## Features
 
 - **Type-Safe Workflows**: Leverage TypeScript's strong typing to define your GitHub Actions workflows and ensure correctness.
+- **Python Bindings**: Access the same powerful constructs and features in Python, allowing seamless integration for Python developers.
 - **Modular Design**: Easily create and manage jobs, triggers, and options for your workflows.
 - **Built-In Support for GitHub Events**: Configure workflows based on various GitHub events such as push, pull request, issue comments, and more.
 - **Customizable Options**: Define environment variables, permissions, concurrency settings, and default job settings.
 
 ## Installation
 
-To get started with `github-actions-cdk`, install the package using npm or yarn:
+To get started with `github-actions-cdk`, install the package using npm or yarn for TypeScript, or pip for Python:
+
+### TypeScript
 
 ```bash
-npm install github-actions-cdk
+npm install github-actions-cdk constructs
 ```
 
 or 
 
 ```bash
-yarn add github-actions-cdk
+yarn add github-actions-cdk constructs
+```
+
+### Python
+```bash
+pip install github-actions-cdk constructs
 ```
 
 ## Getting Started
 
-### Basic Usage
+### Basic Usage (TypeScript)
 
-Here's a simple example of how to create a GitHub Actions workflow using `github-actions-cdk`:
+Here's a simple example of how to create a GitHub Actions workflow using `github-actions-cdk` in TypeScript::
 
 ```typescript
 import { PermissionLevel, Project } from 'github-actions-cdk';
@@ -68,6 +76,51 @@ job.addAction(
 );
 
 project.synth();
+```
+
+### Basic Usage (Python)
+
+Here's how to create a GitHub Actions workflow using `github-actions-cdk` in Python:
+
+```python
+from github_actions_cdk import Project, PermissionLevel
+from github_actions_cdk.actions import Checkout, SetupNode
+
+project = Project()
+
+workflow = project.add_workflow('build', {
+    'name': "Build",
+    'triggers': {
+        'push': {'branches': ['main']},
+        'workflow_dispatch': {}
+    },
+    'permissions': {
+        'contents': PermissionLevel.READ,
+    }
+})
+
+job = workflow.add_job('build', {
+    'env': {
+        'CI': 'true',
+    },
+})
+
+job.add_action(
+    Checkout("checkout", {
+        'name': "Checkout Code",
+        'version': "v4",
+    }),
+)
+
+job.add_action(
+    SetupNode("setup-node", {
+        'name': "Set up Node.js",
+        'version': "v4",
+        'node_version': "20.x",
+    }),
+)
+
+project.synth()
 ```
 
 ## Contributing
