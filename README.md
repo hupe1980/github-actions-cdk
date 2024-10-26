@@ -15,13 +15,13 @@ To get started with `github-actions-cdk`, install the package using npm or yarn 
 ### TypeScript
 
 ```bash
-npm install github-actions-cdk constructs
+npm install github-actions-cdk
 ```
 
 or 
 
 ```bash
-yarn add github-actions-cdk constructs
+yarn add github-actions-cdk
 ```
 
 ### Python
