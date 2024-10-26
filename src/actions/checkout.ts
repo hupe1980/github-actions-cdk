@@ -173,7 +173,7 @@ export interface CheckoutProps extends ActionProps {
  * The Checkout class provides settings for cloning a repository, allowing
  * additional parameters for authentication, configuration, and clone options.
  */
-export class Checkout extends Action<CheckoutOutputs> {
+export class Checkout extends Action {
   public readonly repository?: string;
   public readonly ref?: string;
   public readonly token?: string;

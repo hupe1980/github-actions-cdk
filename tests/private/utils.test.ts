@@ -1,5 +1,4 @@
-import * as fs from "node:fs";
-import { cleanObject, decamelize, ensureDirSync, snakeCaseKeys } from "../../src/private/utils";
+import { cleanObject, decamelize, snakeCaseKeys } from "../../src/private/utils";
 
 describe("decamelize", () => {
   it("should convert camelCase to snake_case", () => {

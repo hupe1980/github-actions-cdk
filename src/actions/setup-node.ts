@@ -102,7 +102,7 @@ export interface SetupNodeProps extends ActionProps {
  * Class representing a Node.js setup action, allowing configuration of the Node.js version,
  * registry settings, caching, and more within a GitHub Actions workflow.
  */
-export class SetupNode extends Action<SetupNodeOutputs> {
+export class SetupNode extends Action {
   public readonly alwaysAuth?: boolean;
   public readonly nodeVersion: string;
   public readonly nodeVersionFile?: string;

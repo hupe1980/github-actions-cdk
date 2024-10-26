@@ -1,5 +1,5 @@
 import type { IConstruct } from "constructs";
-import type { Action, ActionOutputs } from "./action";
+import type { Action } from "./action";
 import { Component } from "./component";
 import type { Defaults } from "./defaults";
 import type { Permissions } from "./permissions";
@@ -296,7 +296,7 @@ export class Job extends Component {
    *
    * @param action - The action to bind to the job.
    */
-  public addAction<T extends ActionOutputs>(action: Action<T>): void {
+  public addAction(action: Action): void {
     action.bind(this);
   }
 

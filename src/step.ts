@@ -3,38 +3,6 @@ import { Component } from "./component";
 import { cleanObject } from "./private/utils";
 
 /**
- * Options for configuring command entry points and additional parameters.
- *
- * This interface allows the specification of an entry point for a command
- * and its associated arguments, as well as any additional options that may
- * be required for flexibility in execution.
- */
-export interface WithOptions {
-  /**
-   * Optional entry point for a command or action.
-   * This represents the primary command that should be executed.
-   *
-   * @example "npm"
-   */
-  readonly entrypoint?: string;
-
-  /**
-   * Optional arguments for the entry point.
-   * This is a string that represents command-line arguments to be passed.
-   *
-   * @example "--version"
-   */
-  readonly args?: string;
-
-  /**
-   * Additional options that can be provided as key-value pairs.
-   * Each key is a string, and the value can be of any type,
-   * allowing for flexibility in specifying extra parameters.
-   */
-  [key: string]: unknown | undefined;
-}
-
-/**
  * Properties for configuring an individual step in a GitHub Actions workflow job.
  */
 export interface StepProps {
@@ -82,7 +50,7 @@ export interface StepProps {
    * This is a key-value map of input parameters that the action can access
    * as environment variables, each prefixed with `INPUT_`.
    */
-  readonly parameters?: WithOptions;
+  readonly parameters?: Record<string, unknown>;
 
   /**
    * Environment variables available to this step.
@@ -137,10 +105,10 @@ export interface StepProps {
  */
 export class Step extends Component {
   public readonly name?: string;
-  public readonly condition?: string; // previously `if`
+  public readonly condition?: string;
   public readonly uses?: string;
   public readonly run?: string[];
-  public readonly parameters?: WithOptions; // previously `with`
+  public readonly parameters?: Record<string, unknown>;
   public readonly env?: Record<string, string>;
   public readonly continueOnError?: boolean;
   public readonly timeoutMinutes?: number;

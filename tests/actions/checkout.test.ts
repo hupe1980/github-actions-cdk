@@ -56,7 +56,7 @@ describe("Checkout", () => {
   });
 
   test("should bind the action to a job and add a step", () => {
-    const step = checkout.bind(job);
+    checkout.bind(job);
 
     expect(job.addStep).toHaveBeenCalledWith("checkout-step", {
       name: checkout.name,

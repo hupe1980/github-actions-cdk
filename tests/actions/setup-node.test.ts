@@ -42,7 +42,7 @@ describe("SetupNode", () => {
   });
 
   test("should bind the action to a job and add a step", () => {
-    const step = setupNode.bind(job);
+    setupNode.bind(job);
 
     expect(job.addStep).toHaveBeenCalledWith("setup-node-step", {
       name: setupNode.name,

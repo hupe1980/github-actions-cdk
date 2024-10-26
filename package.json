@@ -25,27 +25,75 @@
   "license": "MIT",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "typesVersions": {
+    "<=3.9": {
+      "./lib/*": ["./lib/.types-compat/ts3.9/*", "./lib/.types-compat/ts3.9/*/index.d.ts"]
+    }
+  },
   "files": ["lib"],
   "scripts": {
-    "build": "rimraf lib && tsc",
+    "build": "jsii",
+    "build:watch": "jsii --watch",
+    "package": "jsii-pacmak",
     "prepare": "npm run build",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "test": "jest",
-    "example": "ts-node example/workflowsrc.ts"
+    "example": "ts-node example/workflowsrc.ts",
+    "publish:npm": "./scripts/publish-npm.sh",
+    "publish:pypi": "./scripts/publish-pypi.sh"
+  },
+  "bundledDependencies": ["yaml"],
+  "peerDependencies": {
+    "constructs": "^10.4.2"
   },
   "dependencies": {
-    "constructs": "^10.4.2",
     "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.7.9",
+    "constructs": "10.4.2",
     "jest": "^29.7.0",
+    "jsii": "^5.5.4",
+    "jsii-pacmak": "^1.104.0",
+    "jsii-release": "^0.2.906",
     "rimraf": "^6.0.1",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
+  },
+  "stability": "experimental",
+  "jsii": {
+    "outdir": "dist",
+    "tsc": {
+      "outDir": "./lib",
+      "rootDir": "./src"
+    },
+    "targets": {
+      "python": {
+        "module": "github_actions_cdk",
+        "distName": "github-actions-cdk"
+      }
+    }
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests"],
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.dev.json"
+        }
+      ]
+    },
+    "moduleFileExtensions": ["ts", "js", "json", "node"],
+    "testMatch": ["**/__tests__/**/*.ts?(x)", "**/?(*.)+(spec|test).ts?(x)"],
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageProvider": "v8"
   }
 }

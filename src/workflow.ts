@@ -253,7 +253,7 @@ export interface WorkflowRunOptions {
 }
 
 /** Options for workflow dispatch events. */
-export type WorkflowDispatchOptions = Record<never, never>;
+export type WorkflowDispatchOptions = Record<string, unknown>;
 
 /** Available triggers for GitHub Workflows. */
 export interface WorkflowTriggers {
