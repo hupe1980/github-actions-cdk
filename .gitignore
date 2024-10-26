@@ -133,3 +133,4 @@ dist
 .jsii
 /lib
 /dist/
+tsconfig.json
