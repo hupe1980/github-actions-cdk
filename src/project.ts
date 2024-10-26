@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import { RootConstruct } from "constructs";
 import { ensureDirSync } from "./private/utils";
 import { YamlFile } from "./private/yaml";
@@ -75,7 +76,7 @@ export class Project extends RootConstruct {
       .filter<Workflow>((c): c is Workflow => c instanceof Workflow);
 
     for (const workflow of workflows) {
-      const filename = `${this.outdir}/${workflow.name}.yml`;
+      const filename = path.join(this.outdir, `${workflow.name}.yml`);
       const file = new YamlFile(filename, workflow._toObject());
       file.writeFile();
     }

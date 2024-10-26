@@ -1,27 +1,49 @@
-import { Action, type ActionProps } from "../action";
+import { Action, type ActionOutputs, type ActionProps } from "../action";
 import type { Job } from "../job";
 import type { Step } from "../step";
 
 /**
+ * Output structure for the Checkout action.
+ *
+ * Extends from ActionOutputs to include specific outputs related to
+ * the checkout process, such as the reference and commit hash.
+ */
+export interface CheckoutOutputs extends ActionOutputs {
+  /**
+   * The reference (branch, tag, or SHA) that was checked out.
+   */
+  readonly ref: string;
+
+  /**
+   * The commit hash of the checked-out version.
+   */
+  readonly commit: string;
+}
+
+/**
  * Properties for configuring the Checkout component in a GitHub Actions workflow.
+ *
+ * This interface defines various options available for the Checkout action,
+ * including authentication, repository reference, and checkout behavior.
  */
 export interface CheckoutProps extends ActionProps {
   /**
-   * Repository name with owner. For example, actions/checkout
+   * Repository name with owner, for example, `actions/checkout`.
    *
    * @default github.repository
    */
   readonly repository?: string;
 
   /**
-   * The branch, tag, or SHA to checkout. Defaults to the reference or SHA for
-   * the triggering event, or the default branch otherwise.
+   * The branch, tag, or SHA to checkout.
+   * Defaults to the reference or SHA for the triggering event,
+   * or the default branch otherwise.
    */
   readonly ref?: string;
 
   /**
-   * Personal Access Token (PAT) used to fetch the repository, enabling
-   * authenticated git commands.
+   * Personal Access Token (PAT) used to fetch the repository,
+   * enabling authenticated git commands.
    *
    * @default github.token
    */
@@ -33,21 +55,23 @@ export interface CheckoutProps extends ActionProps {
   readonly sshKey?: string;
 
   /**
-   * Known hosts to add to the SSH configuration. Public SSH keys for a host
-   * can be obtained with `ssh-keyscan`, e.g., `ssh-keyscan github.com`.
+   * Known hosts to add to the SSH configuration.
+   * Public SSH keys for a host can be obtained with `ssh-keyscan`,
+   * e.g., `ssh-keyscan github.com`.
    */
   readonly sshKnownHosts?: string;
 
   /**
-   * Whether to perform strict host key checking. When `true`, adds strict
-   * SSH configuration options to the command line.
+   * Whether to perform strict host key checking.
+   * When `true`, adds strict SSH configuration options to the command line.
    *
    * @default true
    */
   readonly sshStrict?: boolean;
 
   /**
-   * User for connecting to the SSH host. Defaults to 'git'.
+   * User for connecting to the SSH host.
+   * Defaults to 'git'.
    *
    * @default "git"
    */
@@ -73,12 +97,14 @@ export interface CheckoutProps extends ActionProps {
   readonly clean?: boolean;
 
   /**
-   * Filter for partially cloning the repository. Overrides `sparseCheckout` if set.
+   * Filter for partially cloning the repository.
+   * Overrides `sparseCheckout` if set.
    */
   readonly filter?: string;
 
   /**
    * Patterns for sparse checkout.
+   * Only the specified directories or files will be checked out.
    */
   readonly sparseCheckout?: string[];
 
@@ -90,7 +116,8 @@ export interface CheckoutProps extends ActionProps {
   readonly sparseCheckoutConeMode?: boolean;
 
   /**
-   * Number of commits to fetch. `0` indicates all history for all branches and tags.
+   * Number of commits to fetch.
+   * `0` indicates all history for all branches and tags.
    *
    * @default 1
    */
@@ -111,15 +138,15 @@ export interface CheckoutProps extends ActionProps {
   readonly showProgress?: boolean;
 
   /**
-   * Whether to download Git LFS files.
+   * Whether to download Git LFS (Large File Storage) files.
    *
    * @default false
    */
   readonly lfs?: boolean;
 
   /**
-   * Whether to checkout submodules, with options for `true` (checkout submodules) or
-   * `recursive` (checkout submodules recursively).
+   * Whether to checkout submodules,
+   * with options for `true` (checkout submodules) or `recursive` (checkout submodules recursively).
    *
    * @default false
    */
@@ -133,18 +160,20 @@ export interface CheckoutProps extends ActionProps {
   readonly setSafeDirectory?: boolean;
 
   /**
-   * Base URL for the GitHub instance to clone from. Uses environment defaults if not specified.
+   * Base URL for the GitHub instance to clone from.
+   * Uses environment defaults if not specified.
    */
   readonly githubServerUrl?: string;
 }
 
 /**
- * The Checkout action, which checks out a Git repository at a specified version in a GitHub Actions workflow.
+ * The Checkout action, which checks out a Git repository at a specified version
+ * in a GitHub Actions workflow.
  *
  * The Checkout class provides settings for cloning a repository, allowing
  * additional parameters for authentication, configuration, and clone options.
  */
-export class Checkout extends Action {
+export class Checkout extends Action<CheckoutOutputs> {
   public readonly repository?: string;
   public readonly ref?: string;
   public readonly token?: string;
@@ -170,7 +199,8 @@ export class Checkout extends Action {
    * Constructs a Checkout action with the specified ID and properties.
    *
    * @param id - The unique identifier for the action within a workflow.
-   * @param props - The properties configuring the checkout action behavior, such as repository, ref, token, and more.
+   * @param props - The properties configuring the checkout action behavior,
+   * such as repository, ref, token, and more.
    */
   constructor(id: string, props: CheckoutProps) {
     super(id, props);
@@ -231,5 +261,20 @@ export class Checkout extends Action {
         "github-server-url": this.githubServerUrl,
       },
     });
+  }
+
+  /**
+   * Retrieves the outputs of the Checkout action as specified in the GitHub Actions context.
+   *
+   * This method returns an object containing output values that can be referenced in subsequent
+   * steps of the workflow, such as the checked-out reference and commit.
+   *
+   * @returns An object containing the output values of the action.
+   */
+  public get outputs(): CheckoutOutputs {
+    return {
+      ref: `\${{ steps.${this.id}.outputs.ref }}`,
+      commit: `\${{ steps.${this.id}.outputs.commit }}`,
+    };
   }
 }

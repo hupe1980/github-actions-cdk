@@ -1,5 +1,5 @@
 import type { IConstruct } from "constructs";
-import type { Action } from "./action";
+import type { Action, ActionOutputs } from "./action";
 import { Component } from "./component";
 import type { Defaults } from "./defaults";
 import type { Permissions } from "./permissions";
@@ -112,6 +112,8 @@ export class Job extends Component {
   public readonly environment?: unknown;
   public readonly runsOn: string[] | string;
 
+  private _outputs?: Record<string, string>;
+
   /**
    * Creates a new Job instance.
    *
@@ -129,6 +131,8 @@ export class Job extends Component {
     this.permissions = props.permissions;
     this.environment = props.environment;
     this.runsOn = props.runsOn ?? "ubuntu-latest";
+
+    this._outputs = props.outputs;
   }
 
   /**
@@ -136,6 +140,30 @@ export class Job extends Component {
    */
   get id(): string {
     return this.node.id;
+  }
+
+  /**
+   * Retrieves the outputs defined for this job.
+   *
+   * @returns A map of output names to their values.
+   */
+  get outputs(): Record<string, string> | undefined {
+    return this._outputs;
+  }
+
+  /**
+   * Adds an output to the job.
+   *
+   * Outputs can be used by downstream jobs that depend on this job.
+   *
+   * @param name - The name of the output.
+   * @param value - The value of the output.
+   */
+  public addOutput(name: string, value: string): void {
+    if (!this._outputs) {
+      this._outputs = {};
+    }
+    this._outputs[name] = value;
   }
 
   /**
@@ -159,7 +187,7 @@ export class Job extends Component {
    *
    * @param action - The action to bind to the job.
    */
-  public addAction(action: Action): void {
+  public addAction<T extends ActionOutputs>(action: Action<T>): void {
     action.bind(this);
   }
 
@@ -188,6 +216,7 @@ export class Job extends Component {
         needs: this.needs,
         permissions: this.permissions,
         environment: this.environment,
+        outputs: this._outputs,
         steps: steps.map((step) => step._toObject()),
       },
     };
