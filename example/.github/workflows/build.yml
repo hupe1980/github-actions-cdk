@@ -17,10 +17,6 @@ jobs:
       - id: checkout
         name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          sparse-checkout: |-
-            examples
-            src
       - id: setup-node
         name: Set up Node.js
         uses: actions/setup-node@v4

@@ -1,6 +1,7 @@
 import type { IConstruct } from "constructs";
 import { Component } from "./component";
 import type { ConcurrencyOptions } from "./concurrency";
+import type { Cron } from "./cron";
 import type { Defaults } from "./defaults";
 import { Job, type JobProps } from "./job";
 import type { Permissions } from "./permissions";
@@ -14,7 +15,7 @@ export interface CronScheduleOptions {
    * CRON expression to define workflow schedule.
    * @see https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html#tag_20_25_07
    */
-  readonly cron: string;
+  readonly cron: Cron;
 }
 
 /**
@@ -452,7 +453,7 @@ export class Workflow extends Component {
     const jobs = this.node.findAll().filter((n) => n instanceof Job) as Job[];
     const workflow: Record<string, unknown> = {
       name: this.name,
-      on: snakeCaseKeys(this.triggers, "_"),
+      on: snakeCaseKeys(JSON.parse(JSON.stringify(this.triggers)), "_"),
       env: this.env,
       defaults: this.defaults,
       permissions: this.permissions,
