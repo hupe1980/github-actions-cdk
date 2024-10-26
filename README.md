@@ -7,8 +7,6 @@
 - **Type-Safe Workflows**: Leverage TypeScript's strong typing to define your GitHub Actions workflows and ensure correctness.
 - **Python Bindings**: Access the same powerful constructs and features in Python, allowing seamless integration for Python developers.
 - **Modular Design**: Easily create and manage jobs, triggers, and options for your workflows.
-- **Built-In Support for GitHub Events**: Configure workflows based on various GitHub events such as push, pull request, issue comments, and more.
-- **Customizable Options**: Define environment variables, permissions, concurrency settings, and default job settings.
 
 ## Installation
 

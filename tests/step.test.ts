@@ -32,11 +32,13 @@ describe("Step", () => {
   });
 
   it("should throw an error if both 'uses' and 'run' are specified", () => {
-    expect(() => {
-      new Step(scope, "InvalidStep", {
-        uses: "actions/setup-node@v2",
-        run: ["npm install"],
-      });
-    }).toThrow("You cannot specify both uses and run in a step");
+    const step = new Step(scope, "InvalidStep", {
+      uses: "actions/setup-node@v2",
+      run: ["npm install"],
+    });
+
+    expect(step.node.validate()).toEqual([
+      "Both 'uses' and 'run' cannot be specified in the same step. Please use either 'uses' to reference an action or 'run' to execute a command, but not both.",
+    ]);
   });
 });

@@ -1,4 +1,6 @@
-import { cleanObject, decamelize, snakeCaseKeys } from "../../src/private/utils";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { cleanObject, decamelize, getPackageVersion, snakeCaseKeys } from "../../src/private/utils";
 
 describe("decamelize", () => {
   it("should convert camelCase to snake_case", () => {
@@ -76,5 +78,50 @@ describe("cleanObject", () => {
 
   it("should handle empty objects", () => {
     expect(cleanObject({})).toBeUndefined();
+  });
+});
+
+describe("getPackageVersion", () => {
+  const mockPackageJsonPath = path.resolve(__dirname, "../../package.json");
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return the version from package.json when it exists", () => {
+    const mockVersion = "1.2.3";
+    const mockPackageJson = JSON.stringify({ version: mockVersion });
+
+    jest.spyOn(fs, "existsSync").mockReturnValue(true);
+    jest.spyOn(fs, "readFileSync").mockReturnValue(mockPackageJson);
+
+    const version = getPackageVersion();
+
+    expect(version).toBe(mockVersion);
+    expect(fs.existsSync).toHaveBeenCalledWith(mockPackageJsonPath);
+    expect(fs.readFileSync).toHaveBeenCalledWith(mockPackageJsonPath, "utf-8");
+  });
+
+  it("should return undefined when package.json does not contain a version", () => {
+    const mockPackageJson = JSON.stringify({});
+
+    jest.spyOn(fs, "existsSync").mockReturnValue(true);
+    jest.spyOn(fs, "readFileSync").mockReturnValue(mockPackageJson);
+
+    const version = getPackageVersion();
+
+    expect(version).toBeUndefined();
+    expect(fs.existsSync).toHaveBeenCalledWith(mockPackageJsonPath);
+    expect(fs.readFileSync).toHaveBeenCalledWith(mockPackageJsonPath, "utf-8");
+  });
+
+  it("should return undefined when package.json does not exist", () => {
+    jest.spyOn(fs, "existsSync").mockReturnValue(false);
+
+    const version = getPackageVersion();
+
+    expect(version).toBeUndefined();
+    expect(fs.existsSync).toHaveBeenCalledWith(mockPackageJsonPath);
+    expect(fs.readFileSync).not.toHaveBeenCalled();
   });
 });

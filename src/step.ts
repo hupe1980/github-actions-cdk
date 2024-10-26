@@ -19,6 +19,8 @@ export interface StepProps {
    *
    * This can include GitHub Actions contexts and expressions, allowing
    * conditions like `${{ success() }}` or `${{ github.event_name == 'push' }}`.
+   *
+   * @example "${{ github.event_name == 'push' }}"
    */
   readonly condition?: string;
 
@@ -39,7 +41,7 @@ export interface StepProps {
    * Runs specified command-line programs or scripts in the step's shell.
    * If `name` is not specified, this command's text will display as the step name.
    *
-   * @example "npm install"
+   * @example ["npm", "install"]
    */
   readonly run?: string[];
 
@@ -49,6 +51,8 @@ export interface StepProps {
    *
    * This is a key-value map of input parameters that the action can access
    * as environment variables, each prefixed with `INPUT_`.
+   *
+   * @example { "token": "${{ secrets.GITHUB_TOKEN }}" }
    */
   readonly parameters?: Record<string, unknown>;
 
@@ -57,6 +61,8 @@ export interface StepProps {
    *
    * Step-specific environment variables are accessible within the shell
    * or action, overriding any workflow or job-level environment settings.
+   *
+   * @example { "NODE_ENV": "production" }
    */
   readonly env?: Record<string, string>;
 
@@ -73,6 +79,8 @@ export interface StepProps {
    * Maximum execution time for the step, in minutes.
    *
    * After this time, the step is terminated to prevent indefinite execution.
+   *
+   * @example 10
    */
   readonly timeoutMinutes?: number;
 
@@ -126,14 +134,6 @@ export class Step extends Component {
   constructor(scope: IConstruct, id: string, props: StepProps) {
     super(scope, id);
 
-    if (props.uses && props.run) {
-      throw new Error("You cannot specify both uses and run in a step");
-    }
-
-    if (props.shell && !props.run) {
-      throw new Error("You can only specify shell when run is specified");
-    }
-
     this.name = props.name;
     this.condition = props.condition; // previously `if`
     this.uses = props.uses;
@@ -144,6 +144,26 @@ export class Step extends Component {
     this.timeoutMinutes = props.timeoutMinutes;
     this.workingDirectory = props.workingDirectory;
     this.shell = props.shell;
+
+    this.node.addValidation({
+      validate: () => {
+        const errors: string[] = [];
+
+        if (this.uses && this.run) {
+          errors.push(
+            "Both 'uses' and 'run' cannot be specified in the same step. Please use either 'uses' to reference an action or 'run' to execute a command, but not both.",
+          );
+        }
+
+        if (this.shell && !this.run) {
+          errors.push(
+            "The 'shell' property can only be specified when 'run' is defined. Please ensure you are using 'run' to execute a command before specifying the shell.",
+          );
+        }
+
+        return errors;
+      },
+    });
   }
 
   /**
@@ -151,8 +171,10 @@ export class Step extends Component {
    *
    * This identifier can be used to reference the step within the context of
    * a workflow job.
+   *
+   * @returns The unique identifier of the step.
    */
-  get id(): string {
+  public get id(): string {
     return this.node.id;
   }
 

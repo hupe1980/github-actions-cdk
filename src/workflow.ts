@@ -6,6 +6,7 @@ import type { Defaults } from "./defaults";
 import { Job, type JobProps } from "./job";
 import type { Permissions } from "./permissions";
 import { snakeCaseKeys } from "./private/utils";
+import { type IWorkflowSynthesizer, WorkflowSynthesizer } from "./synthesizer";
 
 /**
  * Options for configuring CRON schedule.
@@ -430,6 +431,8 @@ export class Workflow extends Component {
   public readonly permissions?: Permissions;
   public readonly concurrency?: ConcurrencyOptions;
 
+  public synthesizer: IWorkflowSynthesizer;
+
   /**
    * Initializes a new instance of the Workflow class.
    * @param scope - The construct scope.
@@ -438,6 +441,8 @@ export class Workflow extends Component {
    */
   constructor(scope: IConstruct, id: string, props: WorkflowProps) {
     super(scope, id);
+
+    this.synthesizer = new WorkflowSynthesizer(this, false);
 
     this.name = props.name;
     this.runName = props.runName;
