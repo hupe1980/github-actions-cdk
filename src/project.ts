@@ -55,12 +55,12 @@ export class Project extends RootConstruct {
    * This method allows for the creation of a new GitHub Actions workflow associated
    * with the project, setting it up with a specific name and properties.
    *
-   * @param name - The name of the workflow, used as its identifier.
+   * @param id - The id of the workflow, used as its identifier.
    * @param props - Workflow configuration properties, defining triggers, jobs, and more.
    * @returns A new `Workflow` instance bound to this project.
    */
-  public addWorkflow(name: string, props: WorkflowProps): Workflow {
-    return new Workflow(this, name, props);
+  public addWorkflow(id: string, props: WorkflowProps): Workflow {
+    return new Workflow(this, id, props);
   }
 
   /**
@@ -76,7 +76,7 @@ export class Project extends RootConstruct {
       .filter<Workflow>((c): c is Workflow => c instanceof Workflow);
 
     for (const workflow of workflows) {
-      const filename = path.join(this.outdir, `${workflow.name}.yml`);
+      const filename = path.join(this.outdir, `${workflow.id}.yml`);
       const file = new YamlFile(filename, workflow._toObject());
       file.writeFile();
     }

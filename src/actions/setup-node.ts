@@ -111,7 +111,7 @@ export class SetupNode extends Action<SetupNodeOutputs> {
   public readonly registryUrl?: string;
   public readonly scope?: string;
   public readonly token?: string;
-  public readonly cache?: "npm" | "yarn" | "pnpm";
+  public readonly cache?: string;
   public readonly cacheDependencyPath?: string;
 
   /**
@@ -148,7 +148,7 @@ export class SetupNode extends Action<SetupNodeOutputs> {
     return job.addStep(this.id, {
       name: this.name,
       uses: `actions/setup-node@${this.version}`,
-      with: {
+      parameters: {
         "always-auth": this.alwaysAuth,
         "node-version": this.nodeVersion,
         "node-version-file": this.nodeVersionFile,

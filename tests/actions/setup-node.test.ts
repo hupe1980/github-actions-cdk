@@ -47,7 +47,7 @@ describe("SetupNode", () => {
     expect(job.addStep).toHaveBeenCalledWith("setup-node-step", {
       name: setupNode.name,
       uses: `actions/setup-node@${setupNode.version}`,
-      with: {
+      parameters: {
         "always-auth": setupNode.alwaysAuth,
         "node-version": setupNode.nodeVersion,
         "node-version-file": setupNode.nodeVersionFile,

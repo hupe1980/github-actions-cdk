@@ -61,7 +61,7 @@ describe("Checkout", () => {
     expect(job.addStep).toHaveBeenCalledWith("checkout-step", {
       name: checkout.name,
       uses: `actions/checkout@${checkout.version}`,
-      with: {
+      parameters: {
         repository: checkout.repository,
         ref: checkout.ref,
         token: checkout.token,

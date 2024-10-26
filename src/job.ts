@@ -5,6 +5,62 @@ import type { Defaults } from "./defaults";
 import type { Permissions } from "./permissions";
 import { Step, type StepProps } from "./step";
 
+export interface Matrix {
+  /**
+   * Each option you define in the matrix has a key and value. The keys you
+   * define become properties in the matrix context and you can reference the
+   * property in other areas of your workflow file. For example, if you define
+   * the key os that contains an array of operating systems, you can use the
+   * matrix.os property as the value of the runs-on keyword to create a job
+   * for each operating system.
+   */
+  readonly domain?: Record<string, string[]>;
+
+  /**
+   * You can add additional configuration options to a build matrix job that
+   * already exists. For example, if you want to use a specific version of npm
+   * when the job that uses windows-latest and version 8 of node runs, you can
+   * use include to specify that additional option.
+   */
+  readonly include?: Array<Record<string, string>>;
+
+  /**
+   * You can remove a specific configurations defined in the build matrix
+   * using the exclude option. Using exclude removes a job defined by the
+   * build matrix.
+   */
+  readonly exclude?: Array<Record<string, string>>;
+}
+
+export interface Strategy {
+  /**
+   * You can define a matrix of different job configurations. A matrix allows
+   * you to create multiple jobs by performing variable substitution in a
+   * single job definition. For example, you can use a matrix to create jobs
+   * for more than one supported version of a programming language, operating
+   * system, or tool. A matrix reuses the job's configuration and creates a
+   * job for each matrix you configure.
+   *
+   * A job matrix can generate a maximum of 256 jobs per workflow run. This
+   * limit also applies to self-hosted runners.
+   */
+  readonly matrix?: Matrix;
+
+  /**
+   * When set to true, GitHub cancels all in-progress jobs if any matrix job
+   * fails. Default: true
+   */
+  readonly failFast?: boolean;
+
+  /**
+   * The maximum number of jobs that can run simultaneously when using a
+   * matrix job strategy. By default, GitHub will maximize the number of jobs
+   * run in parallel depending on the available runners on GitHub-hosted
+   * virtual machines.
+   */
+  readonly maxParallel?: number;
+}
+
 /**
  * Configuration properties for a GitHub Actions job.
  */
@@ -93,6 +149,51 @@ export interface JobProps {
    * runsOn: ["self-hosted", "linux", "x64"]
    */
   readonly runsOn?: string[] | string;
+
+  /**
+   * The timeout in minutes for the job to complete.
+   *
+   * This defines how long GitHub Actions should wait for the job to finish
+   * before it is automatically canceled. This helps in managing long-running jobs.
+   *
+   * @default 60
+   * @example
+   * timeoutMinutes: 30
+   */
+  readonly timeoutMinutes?: number;
+
+  /**
+   * The strategy for running this job.
+   *
+   * Allows you to specify a matrix strategy to run the job multiple times with different
+   * configurations, like different Node.js versions or OS types.
+   *
+   * @example
+   * strategy: { matrix: { node: [10, 12, 14] } }
+   */
+  readonly strategy?: Strategy;
+
+  /**
+   * Specifies the job's runner labels.
+   *
+   * This allows you to filter runners by labels, which is particularly useful for
+   * self-hosted runners. You can provide a single label or an array of labels.
+   *
+   * @example
+   * runnerLabels: ["linux", "x64"]
+   */
+  readonly runnerLabels?: string | string[];
+
+  /**
+   * A set of required checks that must pass before the job can run.
+   *
+   * Useful for ensuring that certain status checks are completed before
+   * executing this job, improving the reliability of the workflow.
+   *
+   * @example
+   * requiredChecks: ["ci/check1", "ci/check2"]
+   */
+  readonly requiredChecks?: string[];
 }
 
 /**
@@ -111,6 +212,10 @@ export class Job extends Component {
   public readonly permissions?: Permissions;
   public readonly environment?: unknown;
   public readonly runsOn: string[] | string;
+  public readonly timeoutMinutes?: number;
+  public readonly strategy?: Strategy;
+  public readonly runnerLabels?: string | string[];
+  public readonly requiredChecks?: string[];
 
   private _outputs?: Record<string, string>;
 
@@ -131,6 +236,10 @@ export class Job extends Component {
     this.permissions = props.permissions;
     this.environment = props.environment;
     this.runsOn = props.runsOn ?? "ubuntu-latest";
+    this.timeoutMinutes = props.timeoutMinutes;
+    this.strategy = props.strategy;
+    this.runnerLabels = props.runnerLabels;
+    this.requiredChecks = props.requiredChecks;
 
     this._outputs = props.outputs;
   }
@@ -171,12 +280,12 @@ export class Job extends Component {
    *
    * Each step defines a specific command or set of commands to be executed in sequence within the job.
    *
-   * @param name - The name of the step.
+   * @param id - The id of the step.
    * @param props - The properties and configuration for the step.
    * @returns The newly created step instance.
    */
-  public addStep(name: string, props: StepProps): Step {
-    return new Step(this, name, props);
+  public addStep(id: string, props: StepProps): Step {
+    return new Step(this, id, props);
   }
 
   /**
@@ -198,6 +307,7 @@ export class Job extends Component {
    * configuration, including environment variables, defaults, permissions, and other settings.
    *
    * @returns An object representing the job configuration.
+   * @internal
    */
   public _toObject(): Record<string, unknown> {
     const steps = new Array<Step>();
@@ -218,6 +328,10 @@ export class Job extends Component {
         environment: this.environment,
         outputs: this._outputs,
         steps: steps.map((step) => step._toObject()),
+        "timeout-minutes": this.timeoutMinutes,
+        strategy: this.strategy,
+        "runner-labels": this.runnerLabels,
+        "required-checks": this.requiredChecks,
       },
     };
 

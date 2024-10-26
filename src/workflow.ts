@@ -366,6 +366,31 @@ export interface WorkflowTriggers {
 /** Workflow configuration properties. */
 export interface WorkflowProps {
   /**
+   * The name of the workflow.
+   *
+   * GitHub displays the names of your workflows under your repository's "Actions" tab.
+   * If you omit the name, GitHub displays the workflow file path relative to the root of the repository.
+   *
+   * @example "CI/CD Pipeline"
+   */
+  readonly name?: string;
+
+  /**
+   * The name for workflow runs generated from the workflow.
+   *
+   * GitHub displays the workflow run name in the list of workflow runs on your repository's "Actions" tab.
+   * If `run-name` is omitted or is only whitespace, then the run name is set to event-specific
+   * information for the workflow run. For example, for a workflow triggered by a `push` or
+   * `pull_request` event, it is set as the commit message or the title of the pull request.
+   *
+   * This value can include expressions and can reference the `github` and `inputs` contexts.
+   *
+   * @example
+   * run-name: Deploy to ${{ inputs.deploy_target }} by @${{ github.actor }}
+   */
+  readonly runName?: string;
+
+  /**
    * Triggers that define when this workflow should run.
    */
   readonly triggers?: WorkflowTriggers;
@@ -397,6 +422,8 @@ export interface WorkflowProps {
  * defaults, permissions, concurrency settings, and allows for job creation.
  */
 export class Workflow extends Component {
+  public readonly name?: string;
+  public readonly runName?: string;
   public readonly triggers: WorkflowTriggers;
   public readonly env?: Record<string, string>;
   public readonly defaults?: Defaults;
@@ -406,12 +433,14 @@ export class Workflow extends Component {
   /**
    * Initializes a new instance of the Workflow class.
    * @param scope - The construct scope.
-   * @param name - The name of the workflow.
+   * @param id - The id of the workflow.
    * @param props - The properties for configuring the workflow.
    */
-  constructor(scope: IConstruct, name: string, props: WorkflowProps) {
-    super(scope, name);
+  constructor(scope: IConstruct, id: string, props: WorkflowProps) {
+    super(scope, id);
 
+    this.name = props.name;
+    this.runName = props.runName;
     this.triggers = props.triggers ?? {
       push: { branches: ["main"] },
       workflowDispatch: {},
@@ -429,30 +458,32 @@ export class Workflow extends Component {
   }
 
   /**
-   * Gets the name of the workflow.
+   * Gets the id of the workflow.
    */
-  get name(): string {
+  get id(): string {
     return this.node.id;
   }
 
   /**
    * Adds a new job to the workflow.
-   * @param name - The name of the job.
+   * @param id - The id of the job.
    * @param props - The properties for the job.
    * @returns The created Job instance.
    */
-  public addJob(name: string, props: JobProps): Job {
-    return new Job(this, name, props);
+  public addJob(id: string, props: JobProps): Job {
+    return new Job(this, id, props);
   }
 
   /**
    * Converts the workflow configuration to an object representation.
    * @returns The workflow configuration object.
+   * @internal
    */
   public _toObject(): Record<string, unknown> {
     const jobs = this.node.findAll().filter((n) => n instanceof Job) as Job[];
     const workflow: Record<string, unknown> = {
       name: this.name,
+      "run-name": this.runName,
       on: snakeCaseKeys(JSON.parse(JSON.stringify(this.triggers)), "_"),
       env: this.env,
       defaults: this.defaults,

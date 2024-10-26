@@ -3,6 +3,38 @@ import { Component } from "./component";
 import { cleanObject } from "./private/utils";
 
 /**
+ * Options for configuring command entry points and additional parameters.
+ *
+ * This interface allows the specification of an entry point for a command
+ * and its associated arguments, as well as any additional options that may
+ * be required for flexibility in execution.
+ */
+export interface WithOptions {
+  /**
+   * Optional entry point for a command or action.
+   * This represents the primary command that should be executed.
+   *
+   * @example "npm"
+   */
+  readonly entrypoint?: string;
+
+  /**
+   * Optional arguments for the entry point.
+   * This is a string that represents command-line arguments to be passed.
+   *
+   * @example "--version"
+   */
+  readonly args?: string;
+
+  /**
+   * Additional options that can be provided as key-value pairs.
+   * Each key is a string, and the value can be of any type,
+   * allowing for flexibility in specifying extra parameters.
+   */
+  [key: string]: unknown | undefined;
+}
+
+/**
  * Properties for configuring an individual step in a GitHub Actions workflow job.
  */
 export interface StepProps {
@@ -15,11 +47,12 @@ export interface StepProps {
 
   /**
    * Conditional expression to determine if the step should run.
+   * (corresponds to `if` in GitHub Actions)
    *
    * This can include GitHub Actions contexts and expressions, allowing
    * conditions like `${{ success() }}` or `${{ github.event_name == 'push' }}`.
    */
-  readonly if?: string;
+  readonly condition?: string;
 
   /**
    * Specifies an action to run in this step.
@@ -44,11 +77,12 @@ export interface StepProps {
 
   /**
    * Input parameters for the action specified in `uses`.
+   * (corresponds to `with` in GitHub Actions)
    *
    * This is a key-value map of input parameters that the action can access
    * as environment variables, each prefixed with `INPUT_`.
    */
-  readonly with?: Record<string, unknown>;
+  readonly parameters?: WithOptions;
 
   /**
    * Environment variables available to this step.
@@ -73,6 +107,26 @@ export interface StepProps {
    * After this time, the step is terminated to prevent indefinite execution.
    */
   readonly timeoutMinutes?: number;
+
+  /**
+   * Specifies the working directory for the step.
+   *
+   * Sets the directory in which the step's command or action runs. If not specified,
+   * it defaults to the job's working directory.
+   *
+   * @example "src/"
+   */
+  readonly workingDirectory?: string;
+
+  /**
+   * A shell specification to define the shell environment for this step.
+   *
+   * Allows specifying a shell other than the default, such as `bash`, `powershell`, etc.
+   *
+   * @default "bash"
+   * @example "pwsh"
+   */
+  readonly shell?: "bash" | "sh" | "python" | "cmd" | "pwsh" | "powershell";
 }
 
 /**
@@ -83,35 +137,52 @@ export interface StepProps {
  */
 export class Step extends Component {
   public readonly name?: string;
-  public readonly if?: string;
+  public readonly condition?: string; // previously `if`
   public readonly uses?: string;
   public readonly run?: string[];
-  public readonly with?: Record<string, unknown>;
+  public readonly parameters?: WithOptions; // previously `with`
+  public readonly env?: Record<string, string>;
+  public readonly continueOnError?: boolean;
+  public readonly timeoutMinutes?: number;
+  public readonly workingDirectory?: string;
+  public readonly shell?: string;
 
   /**
    * Creates a new `Step` instance.
    *
    * @param scope - The scope in which to define this construct.
-   * @param name - The identifier for this step.
+   * @param id - The identifier for this step.
    * @param props - Configuration properties for this step.
    * @throws Error if both `uses` and `run` are specified.
    */
-  constructor(scope: IConstruct, name: string, props: StepProps) {
-    super(scope, name);
+  constructor(scope: IConstruct, id: string, props: StepProps) {
+    super(scope, id);
 
     if (props.uses && props.run) {
       throw new Error("You cannot specify both uses and run in a step");
     }
 
+    if (props.shell && !props.run) {
+      throw new Error("You can only specify shell when run is specified");
+    }
+
     this.name = props.name;
-    this.if = props.if;
+    this.condition = props.condition; // previously `if`
     this.uses = props.uses;
     this.run = props.run;
-    this.with = props.with;
+    this.parameters = props.parameters; // previously `with`
+    this.env = props.env;
+    this.continueOnError = props.continueOnError;
+    this.timeoutMinutes = props.timeoutMinutes;
+    this.workingDirectory = props.workingDirectory;
+    this.shell = props.shell;
   }
 
   /**
    * Gets the step's unique identifier.
+   *
+   * This identifier can be used to reference the step within the context of
+   * a workflow job.
    */
   get id(): string {
     return this.node.id;
@@ -124,15 +195,21 @@ export class Step extends Component {
    * unnecessary clutter in the generated YAML.
    *
    * @returns A record representing the step's configuration.
+   * @internal
    */
   public _toObject(): Record<string, unknown> {
     return {
       id: this.id,
       name: this.name,
-      if: this.if,
+      if: this.condition, // retain the original name for serialization
       uses: this.uses,
       run: this.run?.join("\n"),
-      with: cleanObject(this.with),
+      with: cleanObject(this.parameters), // retain the original name for serialization
+      env: this.env,
+      continueOnError: this.continueOnError,
+      timeoutMinutes: this.timeoutMinutes,
+      workingDirectory: this.workingDirectory,
+      shell: this.shell,
     };
   }
 }

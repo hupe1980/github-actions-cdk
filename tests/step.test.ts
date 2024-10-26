@@ -20,9 +20,9 @@ describe("Step", () => {
   it("should create a step with all properties", () => {
     const step = new Step(scope, "TestStepWithAllProps", {
       name: "Build Project",
-      if: "success()",
+      condition: "success()",
       uses: "actions/setup-node@v2",
-      with: { version: "14" },
+      parameters: { version: "14" },
       env: { NODE_ENV: "production" },
       continueOnError: true,
       timeoutMinutes: 10,

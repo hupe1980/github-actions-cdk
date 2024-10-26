@@ -238,7 +238,7 @@ export class Checkout extends Action<CheckoutOutputs> {
     return job.addStep(this.id, {
       name: this.name,
       uses: `actions/checkout@${this.version}`,
-      with: {
+      parameters: {
         repository: this.repository,
         ref: this.ref,
         token: this.token,

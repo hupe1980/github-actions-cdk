@@ -6,6 +6,7 @@ const project = new Project({
 });
 
 const workflow = project.addWorkflow("build", {
+  name: "Build",
   triggers: {
     push: { branches: ["main"] },
     workflowDispatch: {},

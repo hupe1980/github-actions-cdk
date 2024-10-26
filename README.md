@@ -36,6 +36,7 @@ import { Checkout, SetupNode } from 'github-actions-cdk/actions';
 const project = new Project();
 
 const workflow = project.addWorkflow('build', {
+    name: "Build",
     triggers: {
         push: { branches: ['main'] },
         workflowDispatch: {}
