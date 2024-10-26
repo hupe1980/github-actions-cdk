@@ -1,6 +1,6 @@
 {
   "files": {
-    "ignore": ["coverage", "lib"]
+    "ignore": ["coverage", "lib", "tsconfig.json"]
   },
   "formatter": {
     "indentStyle": "space", // default is `tab`
