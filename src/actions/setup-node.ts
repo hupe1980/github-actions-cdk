@@ -2,33 +2,138 @@ import { Action, type ActionProps } from "../action";
 import type { Job } from "../job";
 import type { Step } from "../step";
 
+/**
+ * Properties for configuring the Setup Node.js action in a GitHub Actions workflow.
+ */
 export interface SetupNodeProps extends ActionProps {
-	/**
-	 * Version spec of the version to use in SemVer notation.
-	 * It also admits such aliases as lts/*, latest, nightly and canary builds.
-	 *
-	 * @example
-	 * Examples: 12.x, 10.15.1, >=10.15.0, lts/Hydrogen, 16-nightly, latest, node
-	 */
-	readonly nodeVersion: string;
+  /**
+   * Enables `always-auth` in the npmrc configuration to always require authentication.
+   *
+   * @default false
+   */
+  readonly alwaysAuth?: boolean;
+
+  /**
+   * Version specification of Node.js to use in SemVer notation. Supports various aliases,
+   * such as `lts/*` for long-term support versions, as well as specific builds.
+   *
+   * @example "12.x", "10.15.1", ">=10.15.0", "lts/Hydrogen", "16-nightly", "latest", "node"
+   */
+  readonly nodeVersion: string;
+
+  /**
+   * File containing the Node.js version specification, typically used by version managers.
+   *
+   * @example "package.json", ".nvmrc", ".node-version", ".tool-versions"
+   */
+  readonly nodeVersionFile?: string;
+
+  /**
+   * Target system architecture for the Node.js installation.
+   *
+   * @example "x86" | "x64" - Defaults to the system architecture if not specified.
+   */
+  readonly architecture?: string;
+
+  /**
+   * When set to `true`, checks for the latest available Node.js version that matches the specified version.
+   *
+   * @default false
+   */
+  readonly checkLatest?: boolean;
+
+  /**
+   * Optional URL of the registry for configuring authentication. This URL is used to set up a project-level
+   * `.npmrc` and `.yarnrc` file, allowing authentication through the `NODE_AUTH_TOKEN` environment variable.
+   */
+  readonly registryUrl?: string;
+
+  /**
+   * Optional scope for authentication against scoped registries. If unspecified, defaults to the repository owner when using GitHub Packages.
+   */
+  readonly scope?: string;
+
+  /**
+   * Token used to fetch Node.js distributions. Defaults to `github.token` on GitHub.com.
+   * For GitHub Enterprise Server (GHES), a personal access token may be used to avoid rate limiting.
+   *
+   * @default github.server_url === "https://github.com" ? github.token : ""
+   */
+  readonly token?: string;
+
+  /**
+   * Specifies the package manager to use for caching dependencies in the default directory.
+   * Supported values include `"npm"`, `"yarn"`, and `"pnpm"`.
+   */
+  readonly cache?: "npm" | "yarn" | "pnpm";
+
+  /**
+   * Path to the dependency file used for caching. Supports individual file paths and wildcards to match multiple files.
+   *
+   * @example "package-lock.json", "yarn.lock"
+   */
+  readonly cacheDependencyPath?: string;
 }
 
+/**
+ * Class representing a Node.js setup action, allowing configuration of the Node.js version,
+ * registry settings, caching, and more within a GitHub Actions workflow.
+ */
 export class SetupNode extends Action {
-	public readonly nodeVersion: string;
+  public readonly alwaysAuth?: boolean;
+  public readonly nodeVersion: string;
+  public readonly nodeVersionFile?: string;
+  public readonly architecture?: string;
+  public readonly checkLatest?: boolean;
+  public readonly registryUrl?: string;
+  public readonly scope?: string;
+  public readonly token?: string;
+  public readonly cache?: "npm" | "yarn" | "pnpm";
+  public readonly cacheDependencyPath?: string;
 
-	constructor(id: string, props: SetupNodeProps) {
-		super(id, props);
+  /**
+   * Initializes a new instance of the `SetupNode` action.
+   *
+   * @param id - A unique identifier for the action instance.
+   * @param props - Properties for configuring the Setup Node.js action.
+   */
+  constructor(id: string, props: SetupNodeProps) {
+    super(id, props);
 
-		this.nodeVersion = props.nodeVersion;
-	}
+    this.alwaysAuth = props.alwaysAuth;
+    this.nodeVersion = props.nodeVersion;
+    this.nodeVersionFile = props.nodeVersionFile;
+    this.architecture = props.architecture;
+    this.checkLatest = props.checkLatest;
+    this.registryUrl = props.registryUrl;
+    this.scope = props.scope;
+    this.token = props.token;
+    this.cache = props.cache;
+    this.cacheDependencyPath = props.cacheDependencyPath;
+  }
 
-	public bind(job: Job): Step {
-		return job.addStep(this.id, {
-			name: this.name,
-			uses: `actions/setup-node@${this.version}`,
-			with: {
-				"node-version": this.nodeVersion,
-			},
-		});
-	}
+  /**
+   * Binds the action to a job by adding it as a step in the GitHub Actions workflow.
+   *
+   * @param job - The job to bind the action to.
+   * @returns The configured `Step` for the GitHub Actions job.
+   */
+  public bind(job: Job): Step {
+    return job.addStep(this.id, {
+      name: this.name,
+      uses: `actions/setup-node@${this.version}`,
+      with: {
+        "always-auth": this.alwaysAuth,
+        "node-version": this.nodeVersion,
+        "node-version-file": this.nodeVersionFile,
+        architecture: this.architecture,
+        "check-latest": this.checkLatest,
+        "registry-url": this.registryUrl,
+        scope: this.scope,
+        token: this.token,
+        cache: this.cache,
+        "cache-dependency-path": this.cacheDependencyPath,
+      },
+    });
+  }
 }

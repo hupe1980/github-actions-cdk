@@ -35,7 +35,7 @@ import { Checkout } from 'github-actions-cdk/actions';
 
 const project = new Project();
 
-const workflow = new Workflow(project, 'build', {
+const workflow = project.addWorkflow('build', {
     triggers: {
         push: { branches: ['main'] },
         workflowDispatch: {}
@@ -45,15 +45,15 @@ const workflow = new Workflow(project, 'build', {
     }
 });
 
-const job = workflow.addJob("build", {
+const job = workflow.addJob('build', {
 	env: {
-		CI: "true",
+		CI: 'true',
 	},
 });
 
 job.addAction(
-	new Checkout("checkout", {
-		version: "v4",
+	new Checkout('checkout', {
+		version: 'v4',
 	}),
 );
 

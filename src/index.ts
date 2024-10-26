@@ -1,4 +1,5 @@
 export * from "./action";
+export * from "./component";
 export * from "./concurrency";
 export * from "./defaults";
 export * from "./job";
