@@ -8,3 +8,6 @@ export * from "./permissions";
 export * from "./project";
 export * from "./step";
 export * from "./workflow";
+
+// export submobules
+export * as actions from "./actions";

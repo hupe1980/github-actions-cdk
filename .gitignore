@@ -130,7 +130,9 @@ dist
 .pnp.*
 
 .DS_Store
+.venv
 .jsii
+.mypy_cache/
 /lib
 /dist/
 tsconfig.json

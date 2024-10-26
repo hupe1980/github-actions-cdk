@@ -1,8 +1,8 @@
-import { PermissionLevel, Project } from "../src";
-import { Checkout, SetupNode } from "../src/actions";
+import { PermissionLevel, Project } from "../../src";
+import { Checkout, SetupNode } from "../../src/actions";
 
 const project = new Project({
-  outdir: "example/.github/workflows",
+  outdir: "examples/typescript/.github/workflows",
 });
 
 const workflow = project.addWorkflow("build", {

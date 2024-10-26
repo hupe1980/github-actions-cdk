@@ -1,4 +1,4 @@
-import { Action, type ActionOutputs, type ActionProps } from "../action";
+import { Action, type ActionProps } from "../action";
 import type { Job } from "../job";
 import type { Step } from "../step";
 
@@ -8,7 +8,7 @@ import type { Step } from "../step";
  * Extends from ActionOutputs to include specific outputs related to
  * the checkout process, such as the reference and commit hash.
  */
-export interface CheckoutOutputs extends ActionOutputs {
+export interface CheckoutOutputs {
   /**
    * The reference (branch, tag, or SHA) that was checked out.
    */

@@ -1,4 +1,4 @@
-import { Action, type ActionOutputs, type ActionProps } from "../action";
+import { Action, type ActionProps } from "../action";
 import type { Job } from "../job";
 import type { Step } from "../step";
 
@@ -8,7 +8,7 @@ import type { Step } from "../step";
  * Extends from ActionOutputs to include specific outputs related to
  * the Node.js setup process.
  */
-export interface SetupNodeOutputs extends ActionOutputs {
+export interface SetupNodeOutputs {
   /**
    * A boolean value represented as a string indicating if a cache was hit.
    */

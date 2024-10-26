@@ -1,12 +1,13 @@
 {
   "name": "github-actions-cdk",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "A TypeScript library for creating and managing GitHub Actions workflows using Constructs, enabling type-safe and modular CI/CD automation.",
   "keywords": [
     "github",
     "actions",
     "cdk",
     "typescript",
+    "python",
     "workflow",
     "ci",
     "cd",
@@ -30,16 +31,17 @@
       "./lib/*": ["./lib/.types-compat/ts3.9/*", "./lib/.types-compat/ts3.9/*/index.d.ts"]
     }
   },
-  "files": ["lib"],
   "scripts": {
     "build": "jsii",
     "build:watch": "jsii --watch",
+    "clean": "rimraf dist lib",
     "package": "jsii-pacmak",
     "prepare": "npm run build",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "test": "jest",
-    "example": "ts-node example/workflowsrc.ts",
+    "example:typescript": "ts-node examples/typescript/workflowsrc.ts",
+    "example:python": "python3 examples/python/workflowsrc.py",
     "publish:npm": "./scripts/publish-npm.sh",
     "publish:pypi": "./scripts/publish-pypi.sh"
   },
@@ -66,6 +68,9 @@
   },
   "stability": "experimental",
   "jsii": {
+    "diagnostics": {
+      "JSII5018": "message"
+    },
     "outdir": "dist",
     "tsc": {
       "outDir": "./lib",
