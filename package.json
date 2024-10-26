@@ -1,6 +1,6 @@
 {
   "name": "github-actions-cdk",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "A TypeScript library for creating and managing GitHub Actions workflows using Constructs, enabling type-safe and modular CI/CD automation.",
   "keywords": [
     "github",
@@ -26,6 +26,7 @@
   "license": "MIT",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "files": ["lib", ".jsii", "!*.tsbuildinfo"],
   "typesVersions": {
     "<=3.9": {
       "./lib/*": ["./lib/.types-compat/ts3.9/*", "./lib/.types-compat/ts3.9/*/index.d.ts"]
