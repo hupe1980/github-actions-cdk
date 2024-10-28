@@ -1,4 +1,5 @@
 import type { IConstruct } from "constructs";
+import { type ShellType, validShells } from "./common";
 import { Component } from "./component";
 import { cleanObject } from "./private/utils";
 
@@ -42,10 +43,6 @@ export interface CommonStepProps {
    */
   readonly env?: Record<string, string>;
 }
-
-const validShells = ["bash", "sh", "python", "cmd", "pwsh", "powershell"] as const;
-
-type ShellType = (typeof validShells)[number];
 
 /**
  * Configuration for a step that runs a shell command.

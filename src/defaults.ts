@@ -1,3 +1,5 @@
+import type { ShellType } from "./common";
+
 /**
  * Configuration options for the execution environment of a job's steps.
  *
@@ -20,7 +22,7 @@ export interface RunSettings {
    * @default The shell is determined automatically based on the operating system
    * and job configuration.
    */
-  readonly shell?: string;
+  readonly shell?: ShellType;
 
   /**
    * Defines the working directory for the step.

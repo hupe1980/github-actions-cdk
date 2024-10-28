@@ -9,79 +9,168 @@ import { RegularStep, type RegularStepProps, RunStep, type RunStepProps, StepBas
 const JOB_SYMBOL = Symbol.for("github-actions-cdk.Job");
 
 /**
- * Defines a matrix of configurations for job variations.
+ * Defines a configuration matrix for variations of a job.
+ *
+ * The matrix feature allows setting up multiple configurations in a job, each with
+ * different parameters. GitHub Actions will create a unique job for each configuration.
  */
 export interface Matrix {
   /**
-   * Defines the domain of values for job matrix keys.
-   * Each key in this object becomes a variable in the matrix context, allowing
-   * for the creation of jobs for each value. For example, the key `os` can
-   * include an array of operating systems, enabling `matrix.os` to define the `runs-on`
-   * target for each job.
+   * Key-value pairs for matrix configuration, where each key can contain
+   * multiple values, producing unique jobs for each combination.
    */
   readonly domain?: Record<string, string[]>;
 
   /**
-   * Allows additional configuration in the matrix.
-   * Adds specified values to a matrix configuration. Useful for adding specific
-   * settings to certain configurations in the matrix, like different Node.js versions
-   * or OS types.
+   * Specific configurations to include in the matrix.
+   * Each entry is a configuration object added to the job matrix.
    */
   readonly include?: Array<Record<string, string>>;
 
   /**
-   * Excludes specific configurations from the matrix.
-   * Using `exclude`, you can remove a job that would otherwise be created by the matrix.
+   * Specific configurations to exclude from the matrix.
+   * Useful for avoiding certain configurations from running.
    */
   readonly exclude?: Array<Record<string, string>>;
 }
 
 /**
- * Defines a job strategy, including matrix configurations and concurrency controls.
+ * Defines a strategy for job execution, including matrix and concurrency settings.
  */
 export interface Strategy {
   /**
-   * Matrix strategy for generating multiple job configurations.
-   * Matrix configurations enable variations in job definitions, such as testing
-   * different OS or programming language versions.
+   * Configuration matrix for job variations.
    */
   readonly matrix?: Matrix;
 
   /**
-   * Controls job cancellation when one matrix job fails.
-   * When true, cancels all in-progress jobs if any matrix job fails. Default: true.
+   * Cancels all in-progress matrix jobs if one fails.
+   * @default true
    */
   readonly failFast?: boolean;
 
   /**
-   * Maximum number of parallel jobs in the matrix.
-   * Limits how many jobs run simultaneously in the matrix to control resource usage.
+   * Limits the number of concurrent jobs in the matrix.
    */
   readonly maxParallel?: number;
+}
+
+/**
+ * Credentials for authenticating with Docker registries.
+ */
+export interface ContainerCredentials {
+  /** Docker registry username. */
+  readonly username: string;
+
+  /** Docker registry password. */
+  readonly password: string;
+}
+
+/**
+ * Configuration options for a Docker container used in the job.
+ */
+export interface ContainerOptions {
+  /** Docker image to run within the job. */
+  readonly image: string;
+
+  /**
+   * Credentials for container registry authentication.
+   */
+  readonly credentials?: ContainerCredentials;
+
+  /**
+   * Environment variables set within the container.
+   */
+  readonly env?: Record<string, string>;
+
+  /**
+   * Ports exposed by the container.
+   */
+  readonly ports?: number[];
+
+  /**
+   * Volumes attached to the container, enabling data sharing.
+   * Each entry specifies a `<source>:<destinationPath>` mapping.
+   */
+  readonly volumes?: string[];
+
+  /**
+   * Additional Docker options for the container.
+   * Refer to Docker's documentation for a list of supported options.
+   *
+   * @see https://docs.docker.com/engine/reference/commandline/create/#options
+   */
+  readonly options?: string[];
 }
 
 /**
  * Properties for configuring a GitHub Actions job.
  */
 export interface JobProps {
-  readonly name?: string; // Display name for the job in the GitHub Actions UI
-  readonly env?: Record<string, string>; // Environment variables for all job steps
-  readonly defaults?: Defaults; // Default settings for job steps
-  readonly needs?: string[]; // Job dependencies that must complete before this job
-  readonly permissions?: Permissions; // Permissions granted to the job
-  readonly environment?: unknown; // Target GitHub environment
-  readonly outputs?: Record<string, string>; // Outputs to be accessed by downstream jobs
-  readonly runsOn?: string[] | string; // Runner environment, e.g., "ubuntu-latest"
-  readonly timeoutMinutes?: number; // Timeout limit for the job
-  readonly strategy?: Strategy; // Job strategy, including matrix configurations
-  readonly runnerLabels?: string | string[]; // Labels for self-hosted runner selection
-  readonly requiredChecks?: string[]; // Required checks to pass before running the job
+  /** Display name for the job. */
+  readonly name?: string;
+
+  /** Environment variables for all steps in the job. */
+  readonly env?: Record<string, string>;
+
+  /** Default configuration settings for job steps. */
+  readonly defaults?: Defaults;
+
+  /** List of job dependencies that must complete before this job starts. */
+  readonly needs?: string[];
+
+  /** Permissions granted to the job. */
+  readonly permissions?: Permissions;
+
+  /** GitHub environment target for this job. */
+  readonly environment?: unknown;
+
+  /** Outputs produced by this job, accessible by downstream jobs. */
+  readonly outputs?: Record<string, string>;
+
+  /** Runner environment, e.g., "ubuntu-latest". */
+  readonly runsOn?: string[] | string;
+
+  /** Timeout duration for the job, in minutes. */
+  readonly timeoutMinutes?: number;
+
+  /** Strategy settings, including matrix configuration and concurrency limits. */
+  readonly strategy?: Strategy;
+
+  /**
+   * Prevents a workflow run from failing when a job fails. Set to true to
+   * allow a workflow run to pass when this job fails.
+   */
+  readonly continueOnError?: boolean;
+
+  /**
+   * A container to run any steps in a job that don't already specify a
+   * container. If you have steps that use both script and container actions,
+   * the container actions will run as sibling containers on the same network
+   * with the same volume mounts.
+   */
+  readonly container?: ContainerOptions;
+
+  /**
+   * Used to host service containers for a job in a workflow. Service
+   * containers are useful for creating databases or cache services like Redis.
+   * The runner automatically creates a Docker network and manages the life
+   * cycle of the service containers.
+   */
+  readonly services?: Record<string, ContainerOptions>;
+
+  /** Runner labels for selecting a self-hosted runner. */
+  readonly runnerLabels?: string | string[];
+
+  /** List of checks required to pass before this job runs. */
+  readonly requiredChecks?: string[];
 }
 
 /**
  * Represents a GitHub Actions job, containing configurations, steps, and dependencies.
- * Jobs are composed of steps and run in a specified environment with
- * defined permissions, environment variables, and strategies.
+ *
+ * Jobs are composed of steps and run within a specified environment with defined
+ * permissions, environment variables, and strategies.
  */
 export class Job extends Component {
   /**
@@ -93,30 +182,32 @@ export class Job extends Component {
     return x !== null && typeof x === "object" && JOB_SYMBOL in x;
   }
 
-  public readonly name?: string; // Display name for the job
-  public readonly env?: Record<string, string>; // Environment variables for all job steps
-  public readonly defaults?: Defaults; // Default settings for job steps
-  public readonly permissions?: Permissions; // Permissions granted to the job
-  public readonly environment?: unknown; // Target GitHub environment
-  public readonly runsOn: string[] | string; // Runner environment, e.g., "ubuntu-latest"
-  public readonly timeoutMinutes?: number; // Timeout limit for the job
-  public readonly strategy?: Strategy; // Job strategy, including matrix configurations
-  public readonly runnerLabels?: string | string[]; // Labels for self-hosted runner selection
-  public readonly requiredChecks?: string[]; // Required checks to pass before running the job
+  public readonly name?: string;
+  public readonly env?: Record<string, string>;
+  public readonly defaults?: Defaults;
+  public readonly permissions?: Permissions;
+  public readonly environment?: unknown;
+  public readonly runsOn: string[] | string;
+  public readonly timeoutMinutes?: number;
+  public readonly strategy?: Strategy;
+  public readonly continueOnError?: boolean;
+  public readonly container?: ContainerOptions;
+  public readonly services?: Record<string, ContainerOptions>;
+  public readonly runnerLabels?: string | string[];
+  public readonly requiredChecks?: string[];
 
-  private _needs: Set<string>; // Job dependencies that must complete before this job
-  private _outputs?: Record<string, string>; // Outputs to be accessed by downstream jobs
+  private _needs: Set<string>;
+  private _outputs?: Record<string, string>;
 
   /**
-   * Creates a new Job instance.
-   * @param scope - The construct scope for this job.
-   * @param id - A unique identifier for the job.
-   * @param props - Properties defining job configurations.
+   * Initializes a new instance of the `Job` class.
+   * @param scope - Construct scope for the job.
+   * @param id - Unique identifier for the job.
+   * @param props - Configuration properties for the job.
    */
   constructor(scope: IConstruct, id: string, props: JobProps) {
     super(scope, id);
 
-    // Mark the construct scope with JOB_SYMBOL to denote it's a Job
     Object.defineProperty(this, JOB_SYMBOL, { value: true });
 
     this.name = props.name;
@@ -127,21 +218,21 @@ export class Job extends Component {
     this.runsOn = props.runsOn ?? "ubuntu-latest";
     this.timeoutMinutes = props.timeoutMinutes;
     this.strategy = props.strategy;
+    this.continueOnError = props.continueOnError;
+    this.container = props.container;
+    this.services = props.services;
     this.runnerLabels = props.runnerLabels;
     this.requiredChecks = props.requiredChecks;
 
     this._needs = new Set(props.needs ?? []);
     this._outputs = props.outputs;
 
-    // Validate the job ID format
     this.node.addValidation({
       validate: () => {
         const errors: string[] = [];
 
         if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(this.id)) {
-          errors.push(
-            `Job id "${this.id}" is invalid. It must match the pattern ^[a-zA-Z_][a-zA-Z0-9_-]*$`,
-          );
+          errors.push(`Job id "${this.id}" is invalid. It must match ^[a-zA-Z_][a-zA-Z0-9_-]*$.`);
         }
 
         return errors;
@@ -149,34 +240,25 @@ export class Job extends Component {
     });
   }
 
-  /**
-   * Retrieves the job's unique identifier.
-   * @returns The unique job identifier.
-   */
+  /** Retrieves the unique identifier for the job. */
   get id(): string {
     return this.node.id;
   }
 
-  /**
-   * Retrieves defined outputs for the job.
-   * @returns A record of outputs if defined, otherwise undefined.
-   */
+  /** Retrieves the job's defined outputs, if any. */
   get outputs(): Record<string, string> | undefined {
     return this._outputs;
   }
 
-  /**
-   * Retrieves the jobs that this job depends on.
-   * @returns An array of job IDs that this job depends on.
-   */
+  /** Retrieves job dependencies. */
   get needs(): string[] {
     return Array.from(this._needs);
   }
 
   /**
-   * Adds an output to the job, accessible by downstream jobs.
-   * @param name - The output name.
-   * @param value - The output value.
+   * Adds an output accessible by downstream jobs.
+   * @param name - Name of the output.
+   * @param value - Value for the output.
    */
   public addOutput(name: string, value: string): void {
     if (!this._outputs) {
@@ -187,10 +269,9 @@ export class Job extends Component {
 
   /**
    * Adds a `RunStep` to the job.
-   * A `RunStep` allows defining shell commands to execute within the job.
-   * @param id - The unique ID of the step.
-   * @param props - Configuration for the `RunStep`.
-   * @returns The created `RunStep` instance.
+   * @param id - Unique ID for the step.
+   * @param props - Properties for the `RunStep`.
+   * @returns Created `RunStep` instance.
    */
   public addRunStep(id: string, props: RunStepProps): RunStep {
     return new RunStep(this, id, props);
@@ -198,20 +279,19 @@ export class Job extends Component {
 
   /**
    * Adds a `RegularStep` to the job.
-   * A `RegularStep` is used for predefined GitHub Actions steps.
-   * @param id - The unique ID of the step.
-   * @param props - Configuration for the `RegularStep`.
-   * @returns The created `RegularStep` instance.
+   * @param id - Unique ID for the step.
+   * @param props - Properties for the `RegularStep`.
+   * @returns Created `RegularStep` instance.
    */
   public addRegularStep(id: string, props: RegularStepProps): RegularStep {
     return new RegularStep(this, id, props);
   }
 
   /**
-   * Adds a generic step to the job, selecting between `RunStep` or `RegularStep`.
-   * @param id - The step ID.
-   * @param props - Properties for either `RunStep` or `RegularStep`.
-   * @returns A `StepBase` instance, depending on the provided properties.
+   * Adds a generic step to the job, choosing between `RunStep` or `RegularStep`.
+   * @param id - ID of the step.
+   * @param props - Step properties.
+   * @returns A `StepBase` instance, depending on the properties.
    */
   public addStep(id: string, props: RunStepProps | RegularStepProps): StepBase {
     return "run" in props
@@ -221,34 +301,30 @@ export class Job extends Component {
 
   /**
    * Binds an action to the job.
-   * Actions are reusable workflows defined in separate files or repositories.
-   * @param action - The action to bind to the job.
+   * @param action - Action to bind.
    */
   public addAction(action: Action): void {
     action.bind(this);
   }
 
   /**
-   * Adds a dependency to another job.
-   * This job will only run after the specified job has completed.
-   * @param job - The job to depend on.
+   * Adds a dependency to another job, which must complete first.
+   * @param job - Job to depend on.
    */
   public addDependency(job: Job): void {
     this._needs.add(job.id);
   }
 
   /**
-   * Serializes the job configuration for GitHub Actions.
-   * Converts the job and its steps into an object format suitable for
-   * GitHub Actions YAML configuration.
-   * @returns An object representing the serialized job configuration.
+   * Serializes the job configuration for GitHub Actions YAML.
+   * @returns An object representing the job configuration.
    * @internal
    * @override
    */
   public _toRecord(): Record<string, unknown> {
     const steps = this.node.findAll().filter((n) => n instanceof StepBase) as StepBase[];
 
-    const jobConfig: Record<string, unknown> = {
+    return {
       [this.id]: {
         name: this.name,
         "runs-on": this.runsOn,
@@ -261,11 +337,11 @@ export class Job extends Component {
         steps: steps.map((step) => step._synth()),
         "timeout-minutes": this.timeoutMinutes,
         strategy: this.strategy,
+        container: this.container,
+        services: this.services,
         "runner-labels": this.runnerLabels,
         "required-checks": this.requiredChecks,
       },
     };
-
-    return jobConfig;
   }
 }
