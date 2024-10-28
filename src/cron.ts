@@ -1,171 +1,198 @@
+/**
+ * CronOptions interface defines the structure for specifying cron fields.
+ * Each field is optional and, if omitted, defaults to '*'.
+ */
 export interface CronOptions {
-  /**
-   * Specifies the minute(s) the cron job should run.
-   * Use `*` for every minute or specify a specific minute (0-59).
-   * Multiple values can be separated by commas, ranges with `-`, and intervals with `/`.
-   *
-   * @default "*" - Every minute
-   */
   readonly minute?: string;
-
-  /**
-   * Specifies the hour(s) the cron job should run.
-   * Use `*` for every hour or specify a specific hour (0-23).
-   * Multiple values can be separated by commas, ranges with `-`, and intervals with `/`.
-   *
-   * @default "*" - Every hour
-   */
   readonly hour?: string;
-
-  /**
-   * Specifies the day(s) of the month the cron job should run.
-   * Use `*` for every day, or specify a day (1-31).
-   * Supports `L` for the last day of the month and `W` for weekdays.
-   * Multiple values can be separated by commas, ranges with `-`, and intervals with `/`.
-   *
-   * @default "*" - Every day of the month
-   */
   readonly day?: string;
-
-  /**
-   * Specifies the month(s) the cron job should run.
-   * Use `*` for every month or specify a month (1-12 or JAN-DEC).
-   * Multiple values can be separated by commas, ranges with `-`, and intervals with `/`.
-   *
-   * @default "*" - Every month
-   */
   readonly month?: string;
-
-  /**
-   * Specifies the day(s) of the week the cron job should run.
-   * Use `*` for every day of the week, or specify a specific day (0-6 or SUN-SAT).
-   * Supports `L` for the last instance and `#` for specifying nth occurrence of the day in the month.
-   * Multiple values can be separated by commas, ranges with `-`, and intervals with `/`.
-   *
-   * @default "*" - Any day of the week
-   */
   readonly weekDay?: string;
 }
 
+/**
+ * The Cron class provides a structure to define, validate, and manipulate cron expressions.
+ * It includes pre-defined schedules and supports custom cron expressions.
+ */
 export class Cron {
+  // Predefined cron expressions for common scheduling intervals
+  public static readonly HOURLY = Cron.fromFields({ minute: "0" });
+  public static readonly DAILY = Cron.fromFields({ minute: "0", hour: "0" });
+  public static readonly WEEKLY = Cron.fromFields({ minute: "0", hour: "0", weekDay: "0" });
+  public static readonly MONTHLY = Cron.fromFields({ minute: "0", hour: "0", day: "1" });
+  public static readonly YEARLY = Cron.fromFields({ minute: "0", hour: "0", day: "1", month: "1" });
+
+  // Cron fields representing minute, hour, day, month, and weekday expressions
   public readonly minute: string;
   public readonly hour: string;
   public readonly day: string;
   public readonly month: string;
   public readonly weekDay: string;
-  public readonly expression: string;
 
   /**
-   * Constructs a new Cron instance using the specified options.
-   * Generates a cron expression string from the input fields and validates it.
-   *
-   * @param props - The schedule options for the cron job.
-   * @throws Will throw an error if the generated cron expression is invalid.
+   * Constructs a Cron instance with each field defaulting to '*' if not specified.
+   * @param options CronOptions object for defining each cron field.
    */
-  constructor(props: CronOptions = {}) {
-    this.minute = props.minute ?? "*";
-    this.hour = props.hour ?? "*";
-    this.day = props.day ?? "*";
-    this.month = props.month ?? "*";
-    this.weekDay = props.weekDay ?? "*";
-
-    // Generate the cron expression from individual fields.
-    this.expression = `${this.minute} ${this.hour} ${this.day} ${this.month} ${this.weekDay}`;
-
-    // Validate the generated cron expression.
-    if (!isValidCronExpression(this.expression)) {
-      throw new Error(`Invalid cron expression: "${this.expression}"`);
-    }
+  constructor(options: CronOptions = {}) {
+    this.minute = options.minute ?? "*";
+    this.hour = options.hour ?? "*";
+    this.day = options.day ?? "*";
+    this.month = options.month ?? "*";
+    this.weekDay = options.weekDay ?? "*";
   }
 
   /**
-   * Converts the Cron instance to a cron expression string.
-   *
-   * @returns The cron expression string in "minute hour day month weekDay" format.
+   * Returns the cron expression as a single string in standard cron format.
+   * @returns The cron expression string.
    */
   public toString(): string {
-    return this.expression;
+    return `${this.minute} ${this.hour} ${this.day} ${this.month} ${this.weekDay}`;
   }
 
   /**
-   * Converts the Cron instance to a JSON representation (string format).
-   *
-   * @returns The cron expression string.
+   * Converts the cron expression to a JSON-compatible string.
+   * @returns The cron expression in string format, suitable for JSON.
    */
   public toJSON(): string {
     return this.toString();
   }
 
   /**
-   * Creates a Cron instance from a single cron expression string.
-   *
-   * @param expression - The cron expression string.
-   * @returns A new Cron instance based on the provided expression.
-   * @throws Will throw an error if the expression is invalid.
+   * Creates a Cron instance from provided cron options.
+   * @param options CronOptions object for defining each cron field.
+   * @returns A new Cron instance with the specified options.
+   */
+  public static fromFields(options: CronOptions): Cron {
+    return new Cron(options);
+  }
+
+  /**
+   * Parses a cron expression string into a Cron instance. Supports standard POSIX format and special strings like "@hourly".
+   * @param expression A valid cron expression string (5 fields or predefined like "@hourly").
+   * @throws Error if the expression does not have exactly 5 fields and is not a recognized special string.
+   * @returns A new Cron instance.
    */
   public static fromExpression(expression: string): Cron {
-    // Validate the expression before creating the instance.
-    if (!isValidCronExpression(expression)) {
-      throw new Error(`Invalid cron expression: "${expression}"`);
-    }
+    switch (expression.trim()) {
+      case "@hourly":
+        return Cron.HOURLY;
+      case "@daily":
+        return Cron.DAILY;
+      case "@weekly":
+        return Cron.WEEKLY;
+      case "@monthly":
+        return Cron.MONTHLY;
+      case "@yearly":
+        return Cron.YEARLY;
+      default: {
+        const fields = expression.split(" ");
+        if (fields.length !== 5) {
+          throw new Error(`Invalid cron expression: "${expression}"`);
+        }
 
-    // Split the expression into its components.
-    const [minute, hour, day, month, weekDay] = expression.split(" ");
-    return new Cron({ minute, hour, day, month, weekDay });
+        const [minute, hour, day, month, weekDay] = fields;
+        return new Cron({ minute, hour, day, month, weekDay });
+      }
+    }
   }
 }
 
 /**
- * Validates the format of a cron expression string by checking each field
- * (minute, hour, day, month, and weekday) for compliance with standard cron
- * syntax, including special characters like `*`, `,`, `-`, `/`, `L`, `W`, and `#`.
- *
- * @param expression - The cron expression string to validate.
- * @returns True if the expression is valid, otherwise false.
+ * Validates a POSIX cron expression string, checking adherence to constraints for each field.
+ * @param expression A cron expression string to validate (5 fields).
+ * @returns True if the cron expression is valid, otherwise false.
  */
 export function isValidCronExpression(expression: string): boolean {
-  /**
-   * Minute field validation pattern.
-   * Accepts values 0-59, `*`, commas for multiple values, ranges with `-`, and intervals with `/`.
-   */
-  const minutePattern = "(?:[0-5]?\\d|\\*|(?:[0-5]?\\d)(?:,[0-5]?\\d)*(?:-[0-5]?\\d)?)";
+  const fields = expression.split(" ");
+  if (fields.length !== 5) {
+    return false;
+  }
 
   /**
-   * Hour field validation pattern.
-   * Accepts values 0-23, `*`, commas for multiple values, ranges with `-`, and intervals with `/`.
+   * Helper function to validate a range of names, ensuring start is before or equal to end.
+   * @param start The starting name in the range.
+   * @param end The ending name in the range.
+   * @param names An array of allowed names (e.g., ["SUN", "MON"]).
+   * @returns True if the range is valid; false otherwise.
    */
-  const hourPattern =
-    "(?:[01]?\\d|2[0-3]|\\*|(?:[01]?\\d|2[0-3])(?:,[01]?\\d|2[0-3])*(?:-[01]?\\d|2[0-3])?)";
+  const isValidNameRange = (start: string, end: string, names: string[]): boolean => {
+    const startIndex = names.indexOf(start);
+    const endIndex = names.indexOf(end);
+    return startIndex !== -1 && endIndex !== -1 && startIndex <= endIndex;
+  };
 
   /**
-   * Day of month field validation pattern.
-   * Accepts values 1-31, `*`, commas for multiple values, ranges with `-`, intervals with `/`,
-   * and special characters `L` for last day and `W` for weekday nearest to the specified day.
+   * Validates individual cron field values based on numeric ranges or allowed names.
+   * Supports '*', ',' for lists, '-' for ranges, and '/' for step values.
+   * @param field The cron field to validate.
+   * @param min The minimum numeric value allowed.
+   * @param max The maximum numeric value allowed.
+   * @param allowNames An optional list of allowed names for the field.
+   * @returns True if the field is valid; false otherwise.
    */
-  const dayPattern =
-    "(?:[1-9]|[12]\\d|3[01]|\\*|L|W|(?:[1-9]|[12]\\d|3[01])(?:,[1-9]|[12]\\d|3[01])*(?:-[1-9]|[12]\\d|3[01])?)";
+  const checkField = (
+    field: string,
+    min: number,
+    max: number,
+    allowNames: string[] = [],
+  ): boolean => {
+    if (field === "*") return true;
 
-  /**
-   * Month field validation pattern.
-   * Accepts values 1-12, `*`, month names (JAN-DEC), commas for multiple values,
-   * ranges with `-`, and intervals with `/`.
-   */
-  const monthPattern =
-    "(?:1[0-2]|[1-9]|\\*|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(?:,(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))*(?:-(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))?)";
+    const regex = new RegExp(`^([0-9${allowNames.join("")},*/-]+)$`);
+    if (!regex.test(field)) return false;
 
-  /**
-   * Day of week field validation pattern.
-   * Accepts values 0-6, `*`, day names (SUN-SAT), commas for multiple values,
-   * ranges with `-`, intervals with `/`, `L` for last day, and `#` for nth occurrence of the day in the month.
-   */
-  const weekDayPattern =
-    "(?:[0-6]|SUN|MON|TUE|WED|THU|FRI|SAT|\\*|L|#|(?:[0-6]|SUN|MON|TUE|WED|THU|FRI|SAT)(?:,[0-6]|SUN|MON|TUE|WED|THU|FRI|SAT)*(?:-[0-6]|SUN|MON|TUE|WED|THU|FRI|SAT)?)";
+    const parts = field.split(",");
+    for (const part of parts) {
+      if (part.includes("/")) {
+        const [range, step] = part.split("/");
+        if (!range || Number.isNaN(Number(step))) return false;
+      } else if (part.includes("-")) {
+        const [start, end] = part.split("-");
+        const isNamedRange = allowNames.includes(start) && allowNames.includes(end);
+        const startNum = Number(start);
+        const endNum = Number(end);
 
-  // Combine all patterns into a complete cron regex.
-  const cronRegex = new RegExp(
-    `^${minutePattern}\\s+${hourPattern}\\s+${dayPattern}\\s+${monthPattern}\\s+${weekDayPattern}$`,
+        // Check for named range validity
+        if (isNamedRange && !isValidNameRange(start, end, allowNames)) {
+          return false;
+        }
+
+        // Check for numeric range validity
+        if (
+          !isNamedRange &&
+          (Number.isNaN(startNum) || Number.isNaN(endNum) || startNum < min || endNum > max)
+        ) {
+          return false;
+        }
+      } else {
+        const partNum = Number(part);
+        if (Number.isNaN(partNum) && !allowNames.includes(part)) return false;
+        if (!Number.isNaN(partNum) && (partNum < min || partNum > max)) return false;
+      }
+    }
+    return true;
+  };
+
+  const [minute, hour, day, month, weekDay] = fields;
+
+  return (
+    checkField(minute, 0, 59) &&
+    checkField(hour, 0, 23) &&
+    checkField(day, 1, 31) &&
+    checkField(month, 1, 12, [
+      "JAN",
+      "FEB",
+      "MAR",
+      "APR",
+      "MAY",
+      "JUN",
+      "JUL",
+      "AUG",
+      "SEP",
+      "OCT",
+      "NOV",
+      "DEC",
+    ]) &&
+    checkField(weekDay, 0, 6, ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"])
   );
-
-  // Test the expression against the cron regex.
-  return cronRegex.test(expression);
 }
