@@ -1,6 +1,7 @@
 export * from "./action";
 export * from "./annotations";
 export * from "./aspect";
+export * from "./check";
 export * from "./component";
 export * from "./concurrency";
 export * from "./cron";
@@ -15,3 +16,4 @@ export * from "./workflow";
 
 // export submobules
 export * as actions from "./actions";
+export * as checks from "./checks";

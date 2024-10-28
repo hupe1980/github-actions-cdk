@@ -14,7 +14,6 @@ const JOB_SYMBOL = Symbol.for("github-actions-cdk.Job");
 export interface Matrix {
   /**
    * Defines the domain of values for job matrix keys.
-   *
    * Each key in this object becomes a variable in the matrix context, allowing
    * for the creation of jobs for each value. For example, the key `os` can
    * include an array of operating systems, enabling `matrix.os` to define the `runs-on`
@@ -24,7 +23,6 @@ export interface Matrix {
 
   /**
    * Allows additional configuration in the matrix.
-   *
    * Adds specified values to a matrix configuration. Useful for adding specific
    * settings to certain configurations in the matrix, like different Node.js versions
    * or OS types.
@@ -33,7 +31,6 @@ export interface Matrix {
 
   /**
    * Excludes specific configurations from the matrix.
-   *
    * Using `exclude`, you can remove a job that would otherwise be created by the matrix.
    */
   readonly exclude?: Array<Record<string, string>>;
@@ -45,7 +42,6 @@ export interface Matrix {
 export interface Strategy {
   /**
    * Matrix strategy for generating multiple job configurations.
-   *
    * Matrix configurations enable variations in job definitions, such as testing
    * different OS or programming language versions.
    */
@@ -53,14 +49,12 @@ export interface Strategy {
 
   /**
    * Controls job cancellation when one matrix job fails.
-   *
    * When true, cancels all in-progress jobs if any matrix job fails. Default: true.
    */
   readonly failFast?: boolean;
 
   /**
    * Maximum number of parallel jobs in the matrix.
-   *
    * Limits how many jobs run simultaneously in the matrix to control resource usage.
    */
   readonly maxParallel?: number;
@@ -86,14 +80,12 @@ export interface JobProps {
 
 /**
  * Represents a GitHub Actions job, containing configurations, steps, and dependencies.
- *
  * Jobs are composed of steps and run in a specified environment with
  * defined permissions, environment variables, and strategies.
  */
 export class Job extends Component {
   /**
    * Checks if an object is an instance of `Job`.
-   *
    * @param x - The object to check.
    * @returns `true` if `x` is a `Job`; otherwise, `false`.
    */
@@ -101,25 +93,24 @@ export class Job extends Component {
     return x !== null && typeof x === "object" && JOB_SYMBOL in x;
   }
 
-  public readonly name?: string;
-  public readonly env?: Record<string, string>;
-  public readonly defaults?: Defaults;
-  public readonly needs?: string[];
-  public readonly permissions?: Permissions;
-  public readonly environment?: unknown;
-  public readonly runsOn: string[] | string;
-  public readonly timeoutMinutes?: number;
-  public readonly strategy?: Strategy;
-  public readonly runnerLabels?: string | string[];
-  public readonly requiredChecks?: string[];
+  public readonly name?: string; // Display name for the job
+  public readonly env?: Record<string, string>; // Environment variables for all job steps
+  public readonly defaults?: Defaults; // Default settings for job steps
+  public readonly permissions?: Permissions; // Permissions granted to the job
+  public readonly environment?: unknown; // Target GitHub environment
+  public readonly runsOn: string[] | string; // Runner environment, e.g., "ubuntu-latest"
+  public readonly timeoutMinutes?: number; // Timeout limit for the job
+  public readonly strategy?: Strategy; // Job strategy, including matrix configurations
+  public readonly runnerLabels?: string | string[]; // Labels for self-hosted runner selection
+  public readonly requiredChecks?: string[]; // Required checks to pass before running the job
 
-  private _outputs?: Record<string, string>;
+  private _needs: Set<string>; // Job dependencies that must complete before this job
+  private _outputs?: Record<string, string>; // Outputs to be accessed by downstream jobs
 
   /**
    * Creates a new Job instance.
-   *
    * @param scope - The construct scope for this job.
-   * @param id    - A unique identifier for the job.
+   * @param id - A unique identifier for the job.
    * @param props - Properties defining job configurations.
    */
   constructor(scope: IConstruct, id: string, props: JobProps) {
@@ -131,7 +122,6 @@ export class Job extends Component {
     this.name = props.name;
     this.env = props.env;
     this.defaults = props.defaults;
-    this.needs = props.needs;
     this.permissions = props.permissions;
     this.environment = props.environment;
     this.runsOn = props.runsOn ?? "ubuntu-latest";
@@ -139,21 +129,29 @@ export class Job extends Component {
     this.strategy = props.strategy;
     this.runnerLabels = props.runnerLabels;
     this.requiredChecks = props.requiredChecks;
+
+    this._needs = new Set(props.needs ?? []);
     this._outputs = props.outputs;
 
-    this.node.addValidation({validate: () => {
-      const errors: string[] = [];
+    // Validate the job ID format
+    this.node.addValidation({
+      validate: () => {
+        const errors: string[] = [];
 
-      if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(this.id)) {
-        errors.push(`Job id "${this.id}" is invalid. It must match the pattern ^[a-zA-Z_][a-zA-Z0-9_-]*$`);
-      }
+        if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(this.id)) {
+          errors.push(
+            `Job id "${this.id}" is invalid. It must match the pattern ^[a-zA-Z_][a-zA-Z0-9_-]*$`,
+          );
+        }
 
-      return errors;
-    }});
+        return errors;
+      },
+    });
   }
 
   /**
    * Retrieves the job's unique identifier.
+   * @returns The unique job identifier.
    */
   get id(): string {
     return this.node.id;
@@ -161,7 +159,6 @@ export class Job extends Component {
 
   /**
    * Retrieves defined outputs for the job.
-   *
    * @returns A record of outputs if defined, otherwise undefined.
    */
   get outputs(): Record<string, string> | undefined {
@@ -169,8 +166,15 @@ export class Job extends Component {
   }
 
   /**
+   * Retrieves the jobs that this job depends on.
+   * @returns An array of job IDs that this job depends on.
+   */
+  get needs(): string[] {
+    return Array.from(this._needs);
+  }
+
+  /**
    * Adds an output to the job, accessible by downstream jobs.
-   *
    * @param name - The output name.
    * @param value - The output value.
    */
@@ -183,9 +187,7 @@ export class Job extends Component {
 
   /**
    * Adds a `RunStep` to the job.
-   *
    * A `RunStep` allows defining shell commands to execute within the job.
-   *
    * @param id - The unique ID of the step.
    * @param props - Configuration for the `RunStep`.
    * @returns The created `RunStep` instance.
@@ -196,9 +198,7 @@ export class Job extends Component {
 
   /**
    * Adds a `RegularStep` to the job.
-   *
    * A `RegularStep` is used for predefined GitHub Actions steps.
-   *
    * @param id - The unique ID of the step.
    * @param props - Configuration for the `RegularStep`.
    * @returns The created `RegularStep` instance.
@@ -209,7 +209,6 @@ export class Job extends Component {
 
   /**
    * Adds a generic step to the job, selecting between `RunStep` or `RegularStep`.
-   *
    * @param id - The step ID.
    * @param props - Properties for either `RunStep` or `RegularStep`.
    * @returns A `StepBase` instance, depending on the provided properties.
@@ -222,9 +221,7 @@ export class Job extends Component {
 
   /**
    * Binds an action to the job.
-   *
    * Actions are reusable workflows defined in separate files or repositories.
-   *
    * @param action - The action to bind to the job.
    */
   public addAction(action: Action): void {
@@ -232,11 +229,18 @@ export class Job extends Component {
   }
 
   /**
+   * Adds a dependency to another job.
+   * This job will only run after the specified job has completed.
+   * @param job - The job to depend on.
+   */
+  public addDependency(job: Job): void {
+    this._needs.add(job.id);
+  }
+
+  /**
    * Serializes the job configuration for GitHub Actions.
-   *
    * Converts the job and its steps into an object format suitable for
    * GitHub Actions YAML configuration.
-   *
    * @returns An object representing the serialized job configuration.
    * @internal
    * @override
@@ -250,7 +254,7 @@ export class Job extends Component {
         "runs-on": this.runsOn,
         env: this.env,
         defaults: this.defaults,
-        needs: this.needs,
+        needs: this._needs.size > 0 ? this.needs : undefined,
         permissions: this.permissions,
         environment: this.environment,
         outputs: this._outputs,

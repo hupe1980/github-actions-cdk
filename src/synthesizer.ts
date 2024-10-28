@@ -5,7 +5,6 @@ import {
   Annotations,
   type WorkflowAnnotation,
   isAnnotationMetadata,
-  isErrorAnnotation,
 } from "./annotations";
 import { Aspects, type IAspect } from "./aspect";
 import type { Manifest } from "./manifest";
@@ -102,12 +101,8 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
    * Creates a new instance of WorkflowSynthesizer.
    *
    * @param workflow - The workflow to be synthesized.
-   * @param continueOnErrorAnnotations - Indicates whether to continue processing on error annotations.
    */
-  constructor(
-    protected workflow: Workflow,
-    private continueOnErrorAnnotations = false,
-  ) {}
+  constructor(protected workflow: Workflow) {}
 
   /**
    * Synthesizes the workflow into a YAML file.
@@ -125,8 +120,9 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
       this.validate();
     }
 
-    const workflowManifest = session.manifest.forModel(this.workflow);
-    const annotations = this.checkAnnotations();
+    const workflowManifest = session.manifest.forWorkflow(this.workflow);
+
+    const annotations = this.collectAnnotations();
 
     workflowManifest.annotations.push(...annotations);
 
@@ -158,26 +154,6 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
         errors,
       );
     }
-  }
-
-  /**
-   * Checks for annotations in the workflow and processes error annotations.
-   *
-   * @returns An array of workflow annotations.
-   * @throws {Error} If there are error annotations and continuation is not allowed.
-   */
-  private checkAnnotations(): WorkflowAnnotation[] {
-    const annotations = this.collectAnnotations();
-
-    if (!this.continueOnErrorAnnotations && annotations.some(isErrorAnnotation)) {
-      const errorMessages = annotations
-        .filter(isErrorAnnotation)
-        .map((a) => `[${a.constructPath}] ${a.message}`)
-        .join("\n");
-      throw new Error(`Encountered Annotations with level "ERROR":\n${errorMessages}`);
-    }
-
-    return annotations;
   }
 
   /**

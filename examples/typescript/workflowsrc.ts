@@ -2,6 +2,7 @@ import { PermissionLevel, Project } from "../../src";
 import { Checkout, SetupNode } from "../../src/actions";
 
 const project = new Project({
+  //additionalChecks: true,
   outdir: "examples/typescript/.github/workflows",
 });
 

@@ -486,7 +486,7 @@ export class Workflow extends Component {
   constructor(scope: IConstruct, id: string, props: WorkflowProps) {
     super(scope, id);
 
-    this.synthesizer = props.synthesizer ?? new WorkflowSynthesizer(this, false);
+    this.synthesizer = props.synthesizer ?? new WorkflowSynthesizer(this);
     this.name = props.name;
     this.runName = props.runName; // Adding runName to the constructor
     this.triggers = props.triggers ?? {

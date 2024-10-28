@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import type { WorkflowAnnotation } from "./annotations";
+import { type WorkflowAnnotation, isErrorAnnotation } from "./annotations";
 import type { Workflow } from "./workflow";
 
 /**
@@ -73,7 +73,7 @@ export class Manifest implements IManifest {
    * @param workflow - The workflow instance for which the manifest is generated.
    * @returns The `WorkflowManifest` for the specified workflow.
    */
-  public forModel(workflow: Workflow): WorkflowManifest {
+  public forWorkflow(workflow: Workflow): WorkflowManifest {
     const { id, path: constructPath } = workflow.node;
 
     if (!this.workflows[id]) {
@@ -86,6 +86,12 @@ export class Manifest implements IManifest {
     }
 
     return this.workflows[id];
+  }
+
+  public hasErrorAnnotation(): boolean {
+    return Object.values(this.workflows).some((workflow) =>
+      workflow.annotations.some(isErrorAnnotation),
+    );
   }
 
   /**

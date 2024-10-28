@@ -46,12 +46,11 @@
     "publish:npm": "./scripts/publish-npm.sh",
     "publish:pypi": "./scripts/publish-pypi.sh"
   },
-  "bundleDependencies": ["cron-parser", "yaml"],
+  "bundleDependencies": ["yaml"],
   "peerDependencies": {
     "constructs": "^10.4.2"
   },
   "dependencies": {
-    "cron-parser": "^4.9.0",
     "yaml": "^2.6.0"
   },
   "devDependencies": {
