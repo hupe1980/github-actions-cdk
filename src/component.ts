@@ -103,7 +103,7 @@ export abstract class Component extends Construct {
     const merged: Record<string, unknown> = { ...base };
 
     for (const key in overrides) {
-      if (Object.hasOwn(overrides, key)) {
+      if (Object.prototype.hasOwnProperty.call(overrides, key)) {
         const overrideValue = overrides[key];
         const baseValue = merged[key];
 

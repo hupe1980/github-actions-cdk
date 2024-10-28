@@ -12,17 +12,52 @@ import type { Manifest } from "./manifest";
 import { YamlFile } from "./private/yaml";
 import type { Workflow } from "./workflow";
 
+const VALIDATION_ERROR_SYMBOL = Symbol("github-actions-cdk.ValidationError");
+
 /**
- * Custom error class for validation errors.
+ * Represents a validation error message with its source.
  */
-export class ValidationError extends Error {
-  constructor(
-    message: string,
-    public readonly errors: { message: string; source: IConstruct }[],
-  ) {
-    super(message);
-    this.name = "ValidationError";
-  }
+export interface ValidationErrorMessage {
+  /**
+   * The message describing the validation error.
+   */
+  readonly message: string;
+
+  /**
+   * The source construct where the error originated.
+   */
+  readonly source: IConstruct;
+}
+
+/**
+ * Creates a validation error with a specified message and associated errors.
+ *
+ * @param message - The error message describing the validation issue.
+ * @param errors - An array of validation error messages with their sources.
+ * @returns A new Error object with additional properties for validation errors.
+ */
+export function createValidationError(message: string, errors: ValidationErrorMessage[]): Error {
+  const error = new Error(message);
+  // @ts-ignore: Allowing dynamic property assignment
+  error.errors = errors;
+  // @ts-ignore: Allowing dynamic property assignment
+  error[VALIDATION_ERROR_SYMBOL] = true;
+  return error;
+}
+
+/**
+ * Checks if the provided error is a validation error.
+ *
+ * @param error - The error to check.
+ * @returns A boolean indicating whether the error is a validation error.
+ */
+export function isValidationError(
+  error: unknown,
+): error is Error & { errors: ValidationErrorMessage[] } {
+  return (
+    error instanceof Error &&
+    (error as { [VALIDATION_ERROR_SYMBOL]?: boolean })[VALIDATION_ERROR_SYMBOL] === true
+  );
 }
 
 /**
@@ -118,7 +153,7 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
     const errors = this.collectValidationErrors();
     if (errors.length > 0) {
       const errorList = errors.map((e) => `- [${e.source.node.path}]: ${e.message}`).join("\n\n  ");
-      throw new ValidationError(
+      throw createValidationError(
         `Validation failed with the following errors:\n\n  ${errorList}\n`,
         errors,
       );
