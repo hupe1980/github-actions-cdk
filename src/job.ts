@@ -140,6 +140,16 @@ export class Job extends Component {
     this.runnerLabels = props.runnerLabels;
     this.requiredChecks = props.requiredChecks;
     this._outputs = props.outputs;
+
+    this.node.addValidation({validate: () => {
+      const errors: string[] = [];
+
+      if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(this.id)) {
+        errors.push(`Job id "${this.id}" is invalid. It must match the pattern ^[a-zA-Z_][a-zA-Z0-9_-]*$`);
+      }
+
+      return errors;
+    }});
   }
 
   /**
