@@ -1,6 +1,6 @@
 import { Action, type ActionProps } from "../action";
 import type { Job } from "../job";
-import type { Step } from "../step";
+import type { RegularStep } from "../step";
 
 /**
  * Output structure for the Checkout action.
@@ -232,10 +232,10 @@ export class Checkout extends Action {
    * checks out the repository based on the defined properties.
    *
    * @param job - The job to bind the checkout step to.
-   * @returns A `Step` representing the configured checkout action within the job.
+   * @returns A `RegularStep` representing the configured checkout action within the job.
    */
-  public bind(job: Job): Step {
-    return job.addStep(this.id, {
+  public bind(job: Job): RegularStep {
+    return job.addRegularStep(this.id, {
       name: this.name,
       uses: `actions/checkout@${this.version}`,
       parameters: {

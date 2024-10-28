@@ -135,4 +135,4 @@ dist
 .mypy_cache/
 /lib
 /dist/
-tsconfig.json
+TODO.md

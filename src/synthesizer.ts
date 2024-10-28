@@ -13,6 +13,19 @@ import { YamlFile } from "./private/yaml";
 import type { Workflow } from "./workflow";
 
 /**
+ * Custom error class for validation errors.
+ */
+export class ValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly errors: { message: string; source: IConstruct }[],
+  ) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+/**
  * Represents the session for synthesizing workflows, including output directory and validation options.
  */
 export interface ISynthesisSession {
@@ -68,6 +81,7 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
    * checking annotations, and writing the output to a file.
    *
    * @param session - The synthesis session containing configuration for the synthesis process.
+   * @throws {ValidationError} If validation errors are found.
    */
   synthesize(session: ISynthesisSession): void {
     this.invokeAspects();
@@ -82,7 +96,10 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
     workflowManifest.annotations.push(...annotations);
 
     const filename = path.join(session.outdir, `${this.workflow.id}.yml`);
-    new YamlFile(filename, this.workflow._toObject()).writeFile();
+
+    const yaml = new YamlFile(filename, this.workflow._synth());
+
+    yaml.writeFile();
   }
 
   /**
@@ -95,12 +112,16 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
   /**
    * Validates the workflow, checking for any errors in the construct tree.
    *
-   * @throws {Error} If validation errors are found.
+   * @throws {ValidationError} If validation errors are found.
    */
   private validate(): void {
     const errors = this.collectValidationErrors();
     if (errors.length > 0) {
-      this.throwValidationError(errors);
+      const errorList = errors.map((e) => `- [${e.source.node.path}]: ${e.message}`).join("\n\n  ");
+      throw new ValidationError(
+        `Validation failed with the following errors:\n\n  ${errorList}\n`,
+        errors,
+      );
     }
   }
 
@@ -133,17 +154,6 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
     return this.workflow.node
       .findAll()
       .flatMap((node) => node.node.validate().map((error) => ({ message: error, source: node })));
-  }
-
-  /**
-   * Throws an error if validation fails, providing details of the errors.
-   *
-   * @param errors - The validation errors to report.
-   * @throws {Error} With details of the validation failures.
-   */
-  private throwValidationError(errors: { message: string; source: IConstruct }[]): void {
-    const errorList = errors.map((e) => `- [${e.source.node.path}]: ${e.message}`).join("\n\n  ");
-    throw new Error(`Validation failed with the following errors:\n\n  ${errorList}\n`);
   }
 
   /**

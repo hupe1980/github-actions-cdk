@@ -3,145 +3,139 @@ import { Component } from "./component";
 import { cleanObject } from "./private/utils";
 
 /**
- * Properties for configuring an individual step in a GitHub Actions workflow job.
+ * Common properties for all step types in a GitHub Actions workflow job.
  */
-export interface StepProps {
+export interface CommonStepProps {
   /**
    * A descriptive name for the step, displayed in the GitHub Actions UI.
-   *
    * @example "Install dependencies"
    */
   readonly name?: string;
 
   /**
-   * Conditional expression to determine if the step should run.
-   * (corresponds to `if` in GitHub Actions)
-   *
-   * This can include GitHub Actions contexts and expressions, allowing
-   * conditions like `${{ success() }}` or `${{ github.event_name == 'push' }}`.
-   *
+   * Conditional expression to determine if the step should run (equivalent to `if` in GitHub Actions).
+   * Supports GitHub Actions expressions, e.g., `${{ success() }}`.
    * @example "${{ github.event_name == 'push' }}"
    */
   readonly condition?: string;
 
   /**
-   * Specifies an action to run in this step.
-   *
-   * Defines a reusable action from the same repository, a public repository,
-   * or a Docker container. Actions provide predefined functionality to avoid
-   * custom scripting for common tasks.
-   *
-   * @example "actions/checkout@v2"
-   */
-  readonly uses?: string;
-
-  /**
-   * A shell command or script to run in this step.
-   *
-   * Runs specified command-line programs or scripts in the step's shell.
-   * If `name` is not specified, this command's text will display as the step name.
-   *
-   * @example ["npm", "install"]
-   */
-  readonly run?: string[];
-
-  /**
-   * Input parameters for the action specified in `uses`.
-   * (corresponds to `with` in GitHub Actions)
-   *
-   * This is a key-value map of input parameters that the action can access
-   * as environment variables, each prefixed with `INPUT_`.
-   *
-   * @example { "token": "${{ secrets.GITHUB_TOKEN }}" }
-   */
-  readonly parameters?: Record<string, unknown>;
-
-  /**
-   * Environment variables available to this step.
-   *
-   * Step-specific environment variables are accessible within the shell
-   * or action, overriding any workflow or job-level environment settings.
-   *
-   * @example { "NODE_ENV": "production" }
-   */
-  readonly env?: Record<string, string>;
-
-  /**
-   * Controls whether the job should continue if this step fails.
-   *
-   * Set to `true` to allow the job to proceed even if this step encounters an error.
-   *
-   * @default false
-   */
-  readonly continueOnError?: boolean;
-
-  /**
    * Maximum execution time for the step, in minutes.
-   *
-   * After this time, the step is terminated to prevent indefinite execution.
-   *
    * @example 10
    */
   readonly timeoutMinutes?: number;
 
   /**
-   * Specifies the working directory for the step.
-   *
-   * Sets the directory in which the step's command or action runs. If not specified,
-   * it defaults to the job's working directory.
-   *
+   * Whether the job should continue if this step fails.
+   * @default false
+   */
+  readonly continueOnError?: boolean;
+
+  /**
+   * Environment variables specific to this step, overriding job-level or workflow-level variables.
+   * @example { "NODE_ENV": "production" }
+   */
+  readonly env?: Record<string, string>;
+}
+
+const validShells = ["bash", "sh", "python", "cmd", "pwsh", "powershell"] as const;
+
+type ShellType = (typeof validShells)[number];
+
+/**
+ * Configuration for a step that runs a shell command.
+ */
+export interface RunStepProps extends CommonStepProps {
+  /**
+   * Commands or scripts to execute in this step.
+   * @example ["npm", "install"]
+   */
+  readonly run?: string | string[];
+
+  /**
+   * Directory in which the step's command or action executes.
+   * Defaults to the job's working directory if not specified.
    * @example "src/"
    */
   readonly workingDirectory?: string;
 
   /**
-   * A shell specification to define the shell environment for this step.
-   *
-   * Allows specifying a shell other than the default, such as `bash`, `powershell`, etc.
-   *
+   * Shell environment for this step, allowing custom shells like `bash`, `pwsh`, etc.
    * @default "bash"
    * @example "pwsh"
    */
-  readonly shell?: "bash" | "sh" | "python" | "cmd" | "pwsh" | "powershell";
+  readonly shell?: ShellType;
 }
 
 /**
- * Represents a single step within a GitHub Actions job.
- *
- * A `Step` can run commands or actions and supports conditional execution,
- * environment variables, input parameters, and more.
+ * Configuration for a step that uses a predefined GitHub Action.
  */
-export class Step extends Component {
+export interface RegularStepProps extends CommonStepProps {
+  /**
+   * GitHub Action to run, identified by repository or Docker image reference.
+   * @example "actions/checkout@v2"
+   */
+  readonly uses?: string;
+
+  /**
+   * Input parameters for the action, passed as a key-value map.
+   * @example { "token": "${{ secrets.GITHUB_TOKEN }}" }
+   */
+  readonly parameters?: Record<string, unknown>;
+}
+
+/**
+ * Base class representing a single step within a GitHub Actions job.
+ */
+export abstract class StepBase extends Component {
   public readonly name?: string;
   public readonly condition?: string;
-  public readonly uses?: string;
-  public readonly run?: string[];
-  public readonly parameters?: Record<string, unknown>;
   public readonly env?: Record<string, string>;
   public readonly continueOnError?: boolean;
   public readonly timeoutMinutes?: number;
+
+  /**
+   * Creates a new `StepBase` instance.
+   * @param scope - The scope in which to define this construct.
+   * @param id - The unique identifier for this step.
+   * @param props - Configuration properties for this step.
+   */
+  constructor(scope: IConstruct, id: string, props: CommonStepProps) {
+    super(scope, id);
+
+    this.name = props.name;
+    this.condition = props.condition;
+    this.env = props.env;
+    this.continueOnError = props.continueOnError;
+    this.timeoutMinutes = props.timeoutMinutes;
+  }
+
+  /**
+   * Retrieves the step's unique identifier within the context of a workflow job.
+   */
+  public get id(): string {
+    return this.node.id;
+  }
+}
+
+/**
+ * Step that runs shell commands in a GitHub Actions job.
+ */
+export class RunStep extends StepBase {
+  public readonly run?: string[];
   public readonly workingDirectory?: string;
   public readonly shell?: string;
 
   /**
-   * Creates a new `Step` instance.
-   *
+   * Creates a new `RunStep` instance.
    * @param scope - The scope in which to define this construct.
-   * @param id - The identifier for this step.
-   * @param props - Configuration properties for this step.
-   * @throws Error if both `uses` and `run` are specified.
+   * @param id - The unique identifier for this step.
+   * @param props - Configuration properties for this run step.
    */
-  constructor(scope: IConstruct, id: string, props: StepProps) {
-    super(scope, id);
+  constructor(scope: IConstruct, id: string, props: RunStepProps) {
+    super(scope, id, props);
 
-    this.name = props.name;
-    this.condition = props.condition; // previously `if`
-    this.uses = props.uses;
-    this.run = props.run;
-    this.parameters = props.parameters; // previously `with`
-    this.env = props.env;
-    this.continueOnError = props.continueOnError;
-    this.timeoutMinutes = props.timeoutMinutes;
+    this.run = typeof props.run === "string" ? [props.run] : props.run;
     this.workingDirectory = props.workingDirectory;
     this.shell = props.shell;
 
@@ -149,16 +143,8 @@ export class Step extends Component {
       validate: () => {
         const errors: string[] = [];
 
-        if (this.uses && this.run) {
-          errors.push(
-            "Both 'uses' and 'run' cannot be specified in the same step. Please use either 'uses' to reference an action or 'run' to execute a command, but not both.",
-          );
-        }
-
-        if (this.shell && !this.run) {
-          errors.push(
-            "The 'shell' property can only be specified when 'run' is defined. Please ensure you are using 'run' to execute a command before specifying the shell.",
-          );
+        if (this.shell && !validShells.includes(this.shell as ShellType)) {
+          errors.push(`'shell' must be one of the following: ${validShells.join(", ")}.`);
         }
 
         return errors;
@@ -167,39 +153,70 @@ export class Step extends Component {
   }
 
   /**
-   * Gets the step's unique identifier.
+   * Serializes the `RunStep` configuration to an object for GitHub Actions YAML output.
    *
-   * This identifier can be used to reference the step within the context of
-   * a workflow job.
+   * Converts the run step configuration into an object format suitable for
+   * GitHub Actions YAML serialization.
    *
-   * @returns The unique identifier of the step.
-   */
-  public get id(): string {
-    return this.node.id;
-  }
-
-  /**
-   * Converts the step properties to an object for YAML serialization.
-   *
-   * Serializes the step's properties, cleaning out empty fields to avoid
-   * unnecessary clutter in the generated YAML.
-   *
-   * @returns A record representing the step's configuration.
+   * @returns An object suitable for YAML serialization.
    * @internal
+   * @override
    */
-  public _toObject(): Record<string, unknown> {
+  public _toRecord(): Record<string, unknown> {
     return {
       id: this.id,
       name: this.name,
-      if: this.condition, // retain the original name for serialization
-      uses: this.uses,
+      if: this.condition,
       run: this.run?.join("\n"),
-      with: cleanObject(this.parameters), // retain the original name for serialization
       env: this.env,
       continueOnError: this.continueOnError,
       timeoutMinutes: this.timeoutMinutes,
       workingDirectory: this.workingDirectory,
       shell: this.shell,
+    };
+  }
+}
+
+/**
+ * Step that runs a predefined GitHub Action within a job.
+ */
+export class RegularStep extends StepBase {
+  public readonly uses?: string;
+  public readonly parameters?: Record<string, unknown>;
+
+  /**
+   * Creates a new `RegularStep` instance.
+   * @param scope - The scope in which to define this construct.
+   * @param id - The unique identifier for this step.
+   * @param props - Configuration properties for this regular step.
+   */
+  constructor(scope: IConstruct, id: string, props: RegularStepProps) {
+    super(scope, id, props);
+
+    this.uses = props.uses;
+    this.parameters = props.parameters;
+  }
+
+  /**
+   * Serializes the `RegularStep` configuration to an object for GitHub Actions YAML output.
+   *
+   * Converts the step configuration into an object format suitable for
+   * GitHub Actions YAML serialization.
+   *
+   * @returns An object suitable for YAML serialization.
+   * @internal
+   * @override
+   */
+  public _toRecord(): Record<string, unknown> {
+    return {
+      id: this.id,
+      name: this.name,
+      if: this.condition,
+      uses: this.uses,
+      with: cleanObject(this.parameters),
+      env: this.env,
+      continueOnError: this.continueOnError,
+      timeoutMinutes: this.timeoutMinutes,
     };
   }
 }

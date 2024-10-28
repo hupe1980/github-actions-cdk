@@ -415,6 +415,11 @@ export interface WorkflowProps {
    * Configuration for concurrency control of workflow runs.
    */
   readonly concurrency?: ConcurrencyOptions;
+
+  /**
+   * Custom synthesizer for rendering the workflow YAML.
+   */
+  readonly synthesizer?: IWorkflowSynthesizer;
 }
 
 /**
@@ -423,29 +428,67 @@ export interface WorkflowProps {
  * defaults, permissions, concurrency settings, and allows for job creation.
  */
 export class Workflow extends Component {
+  /**
+   * The name of the workflow as displayed in GitHub Actions.
+   */
   public readonly name?: string;
+
+  /**
+   * The run name of the workflow, displayed in the GitHub Actions UI.
+   */
   public readonly runName?: string;
+
+  /**
+   * The triggers for the workflow.
+   */
   public readonly triggers: WorkflowTriggers;
+
+  /**
+   * Environment variables available to all jobs in the workflow.
+   */
   public readonly env?: Record<string, string>;
+
+  /**
+   * Default settings applied to all jobs within the workflow.
+   */
   public readonly defaults?: Defaults;
+
+  /**
+   * Permissions required for the workflow to execute.
+   */
   public readonly permissions?: Permissions;
+
+  /**
+   * Concurrency settings for the workflow.
+   */
   public readonly concurrency?: ConcurrencyOptions;
 
-  public synthesizer: IWorkflowSynthesizer;
+  /**
+   * Synthesizer responsible for generating the workflow YAML.
+   */
+  public readonly synthesizer: IWorkflowSynthesizer;
 
   /**
    * Initializes a new instance of the Workflow class.
+   *
    * @param scope - The construct scope.
-   * @param id - The id of the workflow.
+   * @param id - The unique identifier for the workflow.
    * @param props - The properties for configuring the workflow.
+   * @param props.name - The name of the workflow.
+   * @param props.runName - The run name of the workflow.
+   * @param props.triggers - The triggers that define when the workflow runs.
+   * @param props.env - Environment variables for the workflow.
+   * @param props.defaults - Default configurations for jobs in the workflow.
+   * @param props.permissions - Permissions required for the workflow.
+   * @param props.concurrency - Concurrency settings for the workflow.
+   * @param props.synthesizer - Custom synthesizer for rendering the workflow YAML.
    */
   constructor(scope: IConstruct, id: string, props: WorkflowProps) {
     super(scope, id);
 
-    this.synthesizer = new WorkflowSynthesizer(this, false);
-
+    this.synthesizer = props.synthesizer ?? new WorkflowSynthesizer(this, false);
     this.name = props.name;
-    this.runName = props.runName;
+    this.runName = props.runName; // Adding runName to the constructor
     this.triggers = props.triggers ?? {
       push: { branches: ["main"] },
       workflowDispatch: {},
@@ -464,6 +507,8 @@ export class Workflow extends Component {
 
   /**
    * Gets the id of the workflow.
+   *
+   * @returns The unique identifier of the workflow.
    */
   get id(): string {
     return this.node.id;
@@ -471,8 +516,9 @@ export class Workflow extends Component {
 
   /**
    * Adds a new job to the workflow.
-   * @param id - The id of the job.
-   * @param props - The properties for the job.
+   *
+   * @param id - The unique identifier of the job.
+   * @param props - The properties for configuring the job.
    * @returns The created Job instance.
    */
   public addJob(id: string, props: JobProps): Job {
@@ -480,18 +526,25 @@ export class Workflow extends Component {
   }
 
   /**
-   * Converts the workflow configuration to an object representation.
-   * @returns The workflow configuration object.
    * @internal
+   * Synthesizes the workflow configuration into a record format.
+   *
+   * This method collects the workflow's properties, including its triggers,
+   * environment variables, permissions, and jobs, and returns them as an
+   * object suitable for GitHub Actions YAML output.
+   *
+   * @returns A record representing the workflow configuration.
+   * @override
    */
-  public _toObject(): Record<string, unknown> {
+  public _toRecord(): Record<string, unknown> {
     const jobs = this.node.findAll().filter((n) => n instanceof Job) as Job[];
+
     const workflow: Record<string, unknown> = {
       name: this.name,
       "run-name": this.runName,
       on: snakeCaseKeys(JSON.parse(JSON.stringify(this.triggers)), "_"),
       env: this.env,
-      defaults: this.defaults,
+      defaults: snakeCaseKeys(this.defaults),
       permissions: this.permissions,
       ...(this.concurrency && {
         concurrency: {
@@ -499,8 +552,9 @@ export class Workflow extends Component {
           "cancel-in-progress": this.concurrency.cancelInProgress,
         },
       }),
-      jobs: jobs.reduce((prev, current) => Object.assign(prev, current._toObject()), {}),
+      jobs: jobs.reduce((prev, current) => Object.assign(prev, current._synth()), {}),
     };
+
     return workflow;
   }
 }

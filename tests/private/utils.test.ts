@@ -2,6 +2,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { cleanObject, decamelize, getPackageVersion, snakeCaseKeys } from "../../src/private/utils";
 
+jest.mock("node:fs");
+
 describe("decamelize", () => {
   it("should convert camelCase to snake_case", () => {
     expect(decamelize("camelCase")).toBe("camel_case");

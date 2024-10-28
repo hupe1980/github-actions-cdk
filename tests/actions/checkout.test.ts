@@ -8,7 +8,7 @@ describe("Checkout", () => {
   beforeEach(() => {
     // Mock the Job class and its methods
     job = {
-      addStep: jest.fn().mockReturnValue({}),
+      addRegularStep: jest.fn().mockReturnValue({}),
     } as unknown as Job; // Type assertion to match the Job interface
 
     // Create a new instance of the Checkout class before each test
@@ -58,7 +58,7 @@ describe("Checkout", () => {
   test("should bind the action to a job and add a step", () => {
     checkout.bind(job);
 
-    expect(job.addStep).toHaveBeenCalledWith("checkout-step", {
+    expect(job.addRegularStep).toHaveBeenCalledWith("checkout-step", {
       name: checkout.name,
       uses: `actions/checkout@${checkout.version}`,
       parameters: {

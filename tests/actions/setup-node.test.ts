@@ -8,7 +8,7 @@ describe("SetupNode", () => {
   beforeEach(() => {
     // Mock the Job class and its methods
     job = {
-      addStep: jest.fn().mockReturnValue({}),
+      addRegularStep: jest.fn().mockReturnValue({}),
     } as unknown as Job; // Type assertion to match the Job interface
 
     // Create a new instance of the SetupNode class before each test
@@ -44,7 +44,7 @@ describe("SetupNode", () => {
   test("should bind the action to a job and add a step", () => {
     setupNode.bind(job);
 
-    expect(job.addStep).toHaveBeenCalledWith("setup-node-step", {
+    expect(job.addRegularStep).toHaveBeenCalledWith("setup-node-step", {
       name: setupNode.name,
       uses: `actions/setup-node@${setupNode.version}`,
       parameters: {

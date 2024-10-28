@@ -1,6 +1,6 @@
 import { Action, type ActionProps } from "../action";
 import type { Job } from "../job";
-import type { Step } from "../step";
+import type { RegularStep } from "../step";
 
 /**
  * Output structure for the Setup Node.js action.
@@ -142,10 +142,10 @@ export class SetupNode extends Action {
    * making it a part of the workflow execution.
    *
    * @param job - The job to bind the action to.
-   * @returns The configured `Step` for the GitHub Actions job.
+   * @returns The configured `RegularStep` for the GitHub Actions job.
    */
-  public bind(job: Job): Step {
-    return job.addStep(this.id, {
+  public bind(job: Job): RegularStep {
+    return job.addRegularStep(this.id, {
       name: this.name,
       uses: `actions/setup-node@${this.version}`,
       parameters: {

@@ -1,7 +1,7 @@
 import { RootConstruct } from "constructs";
 import { Manifest } from "./manifest";
 import { ensureDirSync, getPackageVersion } from "./private/utils";
-import type { ISynthesisSession } from "./synthesizer";
+import { type ISynthesisSession, ValidationError } from "./synthesizer";
 import { Workflow, type WorkflowProps } from "./workflow";
 
 /**
@@ -109,8 +109,30 @@ export class Project extends RootConstruct {
       .findAll()
       .filter<Workflow>((c): c is Workflow => c instanceof Workflow);
 
-    for (const workflow of workflows) {
-      workflow.synthesizer.synthesize(session);
+    try {
+      for (const workflow of workflows) {
+        workflow.synthesizer.synthesize(session);
+      }
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        this.handleValidationError(error);
+        process.exit(1); // Exit with a non-zero code
+      } else {
+        throw error; // Re-throw unexpected errors
+      }
     }
+  }
+
+  /**
+   * Handles pretty-printing of validation errors.
+   *
+   * @param error - The ValidationError to log.
+   */
+  private handleValidationError(error: ValidationError): void {
+    console.error("❌ Validation failed with the following errors:\n");
+    for (const { message, source } of error.errors) {
+      console.error(`- [${source.node.path}]: ${message}`);
+    }
+    console.error("\nPlease address the validation issues above and try again.\n");
   }
 }

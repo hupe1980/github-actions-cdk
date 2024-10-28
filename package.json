@@ -29,7 +29,7 @@
   "files": ["lib", ".jsii", "!*.tsbuildinfo"],
   "typesVersions": {
     "<=3.9": {
-      "./lib/*": ["./lib/.types-compat/ts3.9/*", "./lib/.types-compat/ts3.9/*/index.d.ts"]
+      "lib/*": ["lib/.types-compat/ts3.9/*", "lib/.types-compat/ts3.9/*/index.d.ts"]
     }
   },
   "scripts": {
@@ -68,6 +68,8 @@
   },
   "stability": "experimental",
   "jsii": {
+    "tsconfig": "tsconfig.json",
+    "validateTsconfig": "strict",
     "diagnostics": {
       "JSII5018": "message"
     },
