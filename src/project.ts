@@ -148,20 +148,25 @@ export class Project extends RootConstruct {
           console.error(`- [${source.node.path}]: ${message}`);
         }
         console.error("\nPlease address the validation issues above and try again.");
-        process.exit(1);
-      } else {
-        throw error;
+
+        const raise = new Error("Validation failed.");
+        raise.stack = undefined;
+        throw raise;
       }
+
+      throw error;
     }
 
     // Print annotations and exit if errors are found and continueOnErrorAnnotations is false
     prettyPrintWorkflowManifestAnnotations(this.manifest);
     if (!this.continueOnErrorAnnotations && this.manifest.hasErrorAnnotation()) {
       console.error("❌ Errors detected in workflows. Exiting with a non-zero code.");
-      process.exit(1);
-    } else {
-      console.log("✅ Workflows synthesized successfully.");
+      const raise = new Error("Error annotation.");
+      raise.stack = undefined;
+      throw raise;
     }
+
+    console.log("✅ Workflows synthesized successfully.");
   }
 }
 

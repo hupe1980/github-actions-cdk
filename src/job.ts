@@ -1,5 +1,4 @@
 import type { IConstruct } from "constructs";
-import type { Action } from "./action";
 import { Component } from "./component";
 import type { Defaults } from "./defaults";
 import type { Permissions } from "./permissions";
@@ -263,7 +262,7 @@ export class Job extends Component {
    * @returns True if the job has one or more steps; otherwise, false.
    */
   public hasSteps(): boolean {
-    return this.node.children.some((child) => StepBase.isStepBase(child));
+    return this.node.findAll().some((child) => StepBase.isStepBase(child));
   }
 
   /**
@@ -296,26 +295,6 @@ export class Job extends Component {
    */
   public addRegularStep(id: string, props: RegularStepProps): RegularStep {
     return new RegularStep(this, id, props);
-  }
-
-  /**
-   * Adds a generic step to the job, choosing between `RunStep` or `RegularStep`.
-   * @param id - ID of the step.
-   * @param props - Step properties.
-   * @returns A `StepBase` instance, depending on the properties.
-   */
-  public addStep(id: string, props: RunStepProps | RegularStepProps): StepBase {
-    return "run" in props
-      ? new RunStep(this, id, props as RunStepProps)
-      : new RegularStep(this, id, props as RegularStepProps);
-  }
-
-  /**
-   * Binds an action to the job.
-   * @param action - Action to bind.
-   */
-  public addAction(action: Action): void {
-    action.bind(this);
   }
 
   /**

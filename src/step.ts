@@ -321,10 +321,9 @@ export function parseExternalActionName(name: string): {
   owner: string;
   repo: string;
   ref: string;
-  path?: string; // Optional path for the second format
+  path?: string;
 } {
-  // Updated regex pattern to capture owner, repo, optional path, and ref correctly
-  const regex = /^([^\/]+)\/([^@\/]+)(\/(.+))?@(.+)$/; // Optional path after the repo
+  const regex = /^([^\/]+)\/([^@\/]+)(\/(.+))?@(.+)$/;
   const match = name.match(regex);
 
   if (!match) {

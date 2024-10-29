@@ -1,89 +1,84 @@
-import { Action, type ActionProps } from "../action"; // Adjust path as needed
-import type { Job } from "../job";
-import type { RegularStep } from "../step";
+import type { IConstruct } from "constructs";
+import { Action, type CommonActionProps } from "../action"; // Adjust path as needed
+import { RegularStep } from "../step";
 
 /**
- * Output structure for the Setup Python action.
+ * Outputs from the Setup Python action.
  *
- * Contains specific outputs related to the Python setup process,
- * including the installed Python version, cache hit status, and executable path.
+ * This interface provides access to the installed Python version, cache hit status,
+ * and the path to the Python executable, which can be referenced in subsequent workflow steps.
  */
 export interface SetupPythonV5Outputs {
   /**
-   * The installed version of Python or PyPy.
+   * The version of Python that was installed.
    */
   readonly pythonVersion: string;
 
   /**
-   * A boolean value indicating whether a cache entry was found.
+   * Indicates if a cache was successfully hit during the action.
    */
   readonly cacheHit: string;
 
   /**
-   * The absolute path to the Python or PyPy executable.
+   * The file path to the Python executable.
    */
   readonly pythonPath: string;
 }
 
 /**
- * Properties for configuring the Setup Python action within a GitHub Actions workflow.
+ * Configuration options for the Setup Python action within a GitHub Actions workflow.
  *
- * This interface extends ActionProps to include specific inputs for the
- * Setup Python action, allowing customization of version specifications, caching, and more.
+ * This interface extends common action properties to include options specific to Python setup,
+ * such as version specifications, caching, and environment updates.
  */
-export interface SetupPythonV5Props extends ActionProps {
+export interface SetupPythonV5Props extends CommonActionProps {
   /**
-   * The version range or exact version of Python or PyPy to use, using SemVer's version range syntax.
-   * If not specified, the action will read the version from `.python-version` file if it exists.
+   * The version of Python to install, specified as a version range or exact version.
    */
   readonly pythonVersion: string;
 
   /**
-   * Optional file containing the Python version to use.
-   * Typically this would be `.python-version`.
+   * Optional path to a file containing the Python version to use.
+   * This is useful for dynamically specifying versions.
    */
   readonly pythonVersionFile?: string;
 
   /**
-   * Specifies the package manager to use for caching dependencies.
-   * Supported values are: "pip", "pipenv", "poetry".
+   * The package manager to use for caching dependencies (`pip`, `pipenv`, or `poetry`).
    */
   readonly cache?: "pip" | "pipenv" | "poetry";
 
   /**
-   * Target architecture of the Python or PyPy interpreter.
-   * Supported values include "x86", "x64", "arm64".
+   * The target architecture for the Python installation (e.g., `x64` or `arm64`).
    */
   readonly architecture?: string;
 
   /**
-   * If true, the action will check for the latest available version that satisfies the specified version.
+   * If true, checks for the latest version matching the specified version.
    *
    * @default false
    */
   readonly checkLatest?: boolean;
 
   /**
-   * Token used for authentication when fetching Python distributions from the GitHub repository.
+   * Token for authentication with package registries.
    */
   readonly token?: string;
 
   /**
-   * Path to dependency files for caching. Supports wildcards or a list of file names.
-   * This allows caching of multiple dependencies efficiently.
+   * Optional path to dependency files for caching.
    */
   readonly cacheDependencyPath?: string;
 
   /**
-   * If true, the action will update environment variables to reflect the new Python version.
+   * If true, updates the environment with the installed Python version.
    *
    * @default true
    */
   readonly updateEnvironment?: boolean;
 
   /**
-   * When set to true, a version range passed to the 'python-version' input will match prerelease versions
-   * if no stable versions are found. Only 'x.y' version ranges are supported for CPython.
+   * If true, allows pre-release versions of Python to be installed.
    *
    * @default false
    */
@@ -91,10 +86,11 @@ export interface SetupPythonV5Props extends ActionProps {
 }
 
 /**
- * Class representing a Python setup action, enabling configuration of the Python version,
- * caching options, and more within a GitHub Actions workflow.
+ * Action class to configure Python within a GitHub Actions workflow.
+ *
+ * This action supports version specification, dependency caching, environment updates, and more.
  */
-export class SetupV5Python extends Action {
+export class SetupPythonV5 extends Action {
   public readonly pythonVersion: string;
   public readonly pythonVersionFile?: string;
   public readonly cache?: "pip" | "pipenv" | "poetry";
@@ -106,14 +102,18 @@ export class SetupV5Python extends Action {
   public readonly allowPrereleases: boolean;
 
   /**
-   * Initializes a new instance of the `SetupPython` action.
+   * Initializes the SetupPython action instance.
    *
-   * @param id - A unique identifier for the action instance.
-   * @param props - Properties for configuring the Setup Python action, such as version,
-   * authentication, caching, and environment updates.
+   * @param scope - Scope in which this construct is defined.
+   * @param id - Unique identifier for the action instance.
+   * @param props - Configuration options, including Python version, cache settings, and environment variables.
    */
-  constructor(id: string, props: SetupPythonV5Props) {
-    super(id, { version: "v5", ...props });
+  constructor(scope: IConstruct, id: string, props: SetupPythonV5Props) {
+    super(scope, id, {
+      actionIdentifier: "actions/setup-python",
+      version: "v5",
+      ...props,
+    });
 
     this.pythonVersion = props.pythonVersion;
     this.pythonVersionFile = props.pythonVersionFile;
@@ -127,18 +127,14 @@ export class SetupV5Python extends Action {
   }
 
   /**
-   * Binds the action to a job by adding it as a step in the GitHub Actions workflow.
+   * Creates a regular step in the specified job for the Setup Python action.
    *
-   * This method configures the action's parameters and integrates it into the specified job,
-   * making it part of the workflow execution.
-   *
-   * @param job - The job to bind the action to.
-   * @returns The configured `RegularStep` for the GitHub Actions job.
+   * @returns A configured `RegularStep` instance for executing the Setup Python action.
    */
-  public bind(job: Job): RegularStep {
-    return job.addRegularStep(this.id, {
-      name: this.renderName(),
-      uses: this.renderUses("actions/setup-python"),
+  protected createRegularStep(): RegularStep {
+    return new RegularStep(this, this.id, {
+      name: this.name,
+      uses: this.uses,
       parameters: {
         "python-version": this.pythonVersion,
         "python-version-file": this.pythonVersionFile,
@@ -154,12 +150,9 @@ export class SetupV5Python extends Action {
   }
 
   /**
-   * Retrieves the outputs of the SetupPython action as specified in the GitHub Actions context.
+   * Retrieves the output parameters from the Setup Python action for use in subsequent workflow steps.
    *
-   * This method returns an object containing output values that can be referenced in subsequent
-   * steps of the workflow, such as the installed Python version, cache hit status, and executable path.
-   *
-   * @returns An object containing the output values of the action.
+   * @returns Outputs object containing `pythonVersion`, `cacheHit`, and `pythonPath`.
    */
   public get outputs(): SetupPythonV5Outputs {
     return {

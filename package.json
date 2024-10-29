@@ -41,8 +41,10 @@
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "test": "jest",
-    "example:typescript": "ts-node examples/typescript/workflowsrc.ts",
-    "example:python": "python3 examples/python/workflowsrc.py",
+    "example:typescript:flat": "ts-node examples/typescript/flat/workflowsrc.ts",
+    "example:typescript:nested": "ts-node examples/typescript/nested/workflowsrc.ts",
+    "example:python:flat": "python3 examples/python/flat/workflowsrc.py",
+    "example:python:nested": "python3 examples/python/nested/workflowsrc.py",
     "publish:npm": "./scripts/publish-npm.sh",
     "publish:pypi": "./scripts/publish-pypi.sh"
   },

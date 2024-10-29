@@ -1,102 +1,103 @@
-import { Action, type ActionProps } from "../action"; // Adjust path as needed
-import type { Job } from "../job";
-import type { RegularStep } from "../step";
+import type { IConstruct } from "constructs";
+import { Action, type CommonActionProps } from "../action";
+import { RegularStep } from "../step";
 
 /**
  * Output structure for the Setup Go action.
  *
- * Includes outputs specifically related to the Go setup process, such as
+ * Provides outputs related to the Go setup process, such as
  * the installed Go version and cache hit status.
  */
 export interface SetupGoV5Outputs {
   /**
-   * The version of Go installed by this action.
+   * The version of Go that has been installed.
    */
   readonly goVersion: string;
 
   /**
-   * A boolean indicating whether a cache was hit for Go dependencies.
+   * A boolean value indicating whether a cache entry was found during the setup.
    */
   readonly cacheHit: string;
 }
 
 /**
- * Properties for configuring the Setup Go action within a GitHub Actions workflow.
+ * Properties for configuring the Setup Go action.
  *
- * This interface extends ActionProps to include specific options for the Setup Go
- * action, enabling custom configuration of Go version, caching, and more.
+ * This interface defines the specific options for Go setup, including
+ * version, caching, and target architecture.
  */
-export interface SetupGoV5Props extends ActionProps {
+export interface SetupGoV5Props extends CommonActionProps {
   /**
-   * Specifies the Go version to download and set up.
-   * Accepts exact version strings, semver specs, or ranges.
+   * The version range or exact version of Go to use.
+   * If not specified, the action will read the version from the `go-version` file if it exists.
    */
   readonly goVersion: string;
 
   /**
-   * Path to a go.mod or go.work file to be used for automatic Go version detection.
-   * If set, the specified version file is used to resolve the Go version.
+   * Optional file containing the Go version to use.
+   * Typically this would be `go-version`.
    */
   readonly goVersionFile?: string;
 
   /**
-   * Set to true to force the action to check for the latest Go version available.
+   * If true, the action will check for the latest available version that satisfies the specified version.
    *
    * @default false
    */
   readonly checkLatest?: boolean;
 
   /**
-   * Token used to access Go distributions from go-versions. Defaults to the
-   * GitHub-provided token in most workflows.
+   * Token used for authentication when fetching Go distributions from the repository.
    */
   readonly token?: string;
 
   /**
-   * Enables caching of Go modules dependencies. This is recommended to reduce
-   * workflow execution time by reusing previously downloaded dependencies.
+   * A boolean indicating whether to cache Go dependencies.
    *
    * @default true
    */
   readonly cache?: boolean;
 
   /**
-   * Path to the dependency file (e.g., go.sum) to use for caching.
-   * If provided, the action uses this path to manage cache for Go modules.
+   * Path to dependency files for caching. Supports wildcards or a list of file names.
+   * This allows caching of multiple dependencies efficiently.
    */
   readonly cacheDependencyPath?: string;
 
   /**
-   * The target CPU architecture for the Go installation. Supported values
-   * include `x86`, `x64`, `arm`, etc. Defaults to the architecture of the
-   * system executing the action.
+   * Target architecture of the Go interpreter.
+   * Supported values include "amd64", "arm64", etc.
    */
   readonly architecture?: string;
 }
 
 /**
- * Class representing the Setup Go action, which configures the Go environment
- * within a GitHub Actions workflow. Supports specific Go version setup, caching,
- * and architecture targeting.
+ * Class representing the Setup Go action in a GitHub Actions workflow.
+ *
+ * This action supports Go version setup, dependency caching, and architecture targeting.
  */
 export class SetupGoV5 extends Action {
   public readonly goVersion: string;
   public readonly goVersionFile?: string;
-  public readonly checkLatest?: boolean;
+  public readonly checkLatest: boolean;
   public readonly token?: string;
-  public readonly cache?: boolean;
+  public readonly cache: boolean;
   public readonly cacheDependencyPath?: string;
   public readonly architecture?: string;
 
   /**
    * Initializes a new instance of the `SetupGo` action with the specified properties.
    *
-   * @param id - A unique identifier for the action instance.
-   * @param props - Properties used to configure the Setup Go action, including
-   * Go version, cache settings, architecture, and optional token for distributions.
+   * @param scope - Scope in which this construct is defined.
+   * @param id - Unique identifier for the action within a workflow.
+   * @param props - Configuration properties for Go setup.
    */
-  constructor(id: string, props: SetupGoV5Props) {
-    super(id, { version: "v5", ...props });
+  constructor(scope: IConstruct, id: string, props: SetupGoV5Props) {
+    super(scope, id, {
+      actionIdentifier: "actions/setup-go",
+      version: "v5",
+      ...props,
+    });
 
     this.goVersion = props.goVersion;
     this.goVersionFile = props.goVersionFile;
@@ -108,18 +109,17 @@ export class SetupGoV5 extends Action {
   }
 
   /**
-   * Binds the action to a job by adding it as a step in the GitHub Actions workflow.
+   * Creates a regular step for the Setup Go action.
    *
-   * This method integrates the configured Setup Go action into the specified job, setting up the Go environment
-   * and applying the provided parameters.
+   * This method sets up the parameters for the action and prepares it to be
+   * executed in the workflow.
    *
-   * @param job - The job to bind the action to.
-   * @returns The configured `RegularStep` for the GitHub Actions job, with parameters set as specified in the action properties.
+   * @returns The configured RegularStep for the GitHub Actions job.
    */
-  public bind(job: Job): RegularStep {
-    return job.addRegularStep(this.id, {
-      name: this.renderName(),
-      uses: this.renderUses("actions/setup-go"),
+  protected createRegularStep(): RegularStep {
+    return new RegularStep(this, this.id, {
+      name: this.name,
+      uses: this.uses,
       parameters: {
         "go-version": this.goVersion,
         "go-version-file": this.goVersionFile,
@@ -133,10 +133,12 @@ export class SetupGoV5 extends Action {
   }
 
   /**
-   * Retrieves the outputs of the Setup Go action, making the installed Go version
-   * and cache status available for reference in subsequent workflow steps.
+   * Retrieves outputs from the Setup Go action.
    *
-   * @returns An object containing the output values of the action, including `goVersion` and `cacheHit`.
+   * This method returns an object containing output values that can be referenced in subsequent
+   * steps of the workflow, including the installed Go version and cache status.
+   *
+   * @returns Go setup outputs, including the installed Go version and cache status.
    */
   public get outputs(): SetupGoV5Outputs {
     return {

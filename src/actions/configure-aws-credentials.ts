@@ -1,6 +1,6 @@
-import { Action, type ActionProps } from "../action"; // Adjust the import path according to your project structure
-import type { Job } from "../job";
-import type { RegularStep } from "../step";
+import type { IConstruct } from "constructs";
+import { Action, type CommonActionProps } from "../action";
+import { RegularStep } from "../step";
 
 /**
  * List of valid AWS regions for credential configuration.
@@ -32,91 +32,95 @@ const validAwsRegions = [
 /**
  * Output structure for the Configure AWS Credentials action.
  *
- * Extends ActionOutputs to provide AWS credentials outputs such as `awsAccountId`, `awsAccessKeyId`, and session tokens.
+ * Provides outputs such as AWS account ID, access keys, and session tokens, enabling
+ * subsequent steps in the workflow to use AWS credentials securely.
  */
 export interface ConfigureAwsCredentialsV4Outputs {
   /**
-   * AWS Account ID associated with the credentials.
+   * The AWS account ID associated with the configured credentials.
+   * This is typically the 12-digit account number linked to the credentials used.
    */
   readonly awsAccountId: string;
 
   /**
-   * AWS Access Key ID for the configured session.
+   * The AWS Access Key ID that allows programmatic access to AWS services.
+   * This key should be handled securely and kept confidential.
    */
   readonly awsAccessKeyId: string;
 
   /**
-   * AWS Secret Access Key for the configured session.
+   * The AWS Secret Access Key paired with the AWS Access Key ID.
+   * This secret is used to authenticate and authorize requests to AWS.
+   * It must be protected to prevent unauthorized access to AWS resources.
    */
   readonly awsSecretAccessKey: string;
 
   /**
-   * AWS Session Token for temporary credentials (if applicable).
+   * A temporary session token associated with the AWS credentials, provided when using
+   * temporary security credentials, such as those obtained through role assumption.
+   * This token must accompany requests along with the Access Key ID and Secret Access Key.
    */
   readonly awsSessionToken: string;
 }
 
 /**
- * Properties for configuring the Configure AWS Credentials action in a GitHub Actions workflow.
+ * Properties for configuring the AWS credentials setup within a GitHub Actions workflow.
  *
- * This interface defines options for authentication, role assumption, and session parameters.
+ * Extends CommonActionProps to allow AWS-specific options, including access key IDs,
+ * session tokens, and optional role assumption parameters.
  */
-export interface ConfigureAwsCredentialsV4Props extends ActionProps {
+export interface ConfigureAwsCredentialsV4Props extends CommonActionProps {
   /**
-   * AWS Region to configure, e.g., `us-east-1`.
-   *
-   * Required field.
+   * AWS region to use for the action. Must be a valid AWS region.
    */
   readonly awsRegion: string;
 
   /**
-   * Optional Amazon Resource Name (ARN) of the IAM role to assume.
+   * Optional role ARN to assume for the AWS session.
    */
   readonly roleToAssume?: string;
 
   /**
-   * Optional AWS Access Key ID for direct configuration.
+   * AWS access key ID to use for credentials.
    */
   readonly awsAccessKeyId?: string;
 
   /**
-   * Optional AWS Secret Access Key for direct configuration.
+   * AWS secret access key associated with the access key ID.
    */
   readonly awsSecretAccessKey?: string;
 
   /**
-   * Optional AWS Session Token for direct configuration.
+   * Session token for temporary AWS credentials.
    */
   readonly awsSessionToken?: string;
 
   /**
-   * Optional path to a web identity token file for identity federation.
+   * Path to a file containing a web identity token, used for assuming a role.
    */
   readonly webIdentityTokenFile?: string;
 
   /**
-   * Optional session duration (in seconds) for the assumed role, maximum is 43200 seconds (12 hours).
+   * Duration, in seconds, for the assumed role session.
    */
   readonly roleDurationSeconds?: string;
 
   /**
-   * Optional name for the assumed role session, useful for tracking purposes.
+   * Name for the assumed role session.
    */
   readonly roleSessionName?: string;
 
   /**
-   * Determines if credentials should be exposed as step output, making them available for later workflow steps.
-   *
-   * @default false
+   * If true, outputs the credentials for use in later steps.
    */
   readonly outputCredentials?: boolean;
 }
 
 /**
- * Class representing the Configure AWS Credentials action, allowing AWS credentials configuration
- * in a GitHub Actions workflow.
+ * Configure AWS Credentials action for GitHub Actions.
  *
- * This action supports multiple methods of credential setup, including direct access keys, session tokens, and role assumption.
+ * Enables AWS credentials setup via access keys, session tokens, and role assumption, allowing
+ * workflow steps to interact with AWS services.
  */
 export class ConfigureAwsCredentialsV4 extends Action {
   public readonly awsRegion: string;
@@ -130,13 +134,23 @@ export class ConfigureAwsCredentialsV4 extends Action {
   public readonly outputCredentials?: boolean;
 
   /**
-   * Initializes a new instance of the `ConfigureAwsCredentials` action with specified properties.
+   * Initializes a new instance of the Configure AWS Credentials action.
    *
-   * @param id - A unique identifier for the action instance.
-   * @param props - Properties for configuring the AWS credentials, including the region and optional access keys, roles, and session parameters.
+   * @param scope - Construct scope in which this action is defined.
+   * @param id - Unique identifier for the action within a workflow.
+   * @param props - Configuration properties for AWS credentials setup.
    */
-  constructor(id: string, props: ConfigureAwsCredentialsV4Props) {
-    super(id, { version: "v4", ...props });
+  constructor(scope: IConstruct, id: string, props: ConfigureAwsCredentialsV4Props) {
+    super(scope, id, {
+      actionIdentifier: "aws-actions/configure-aws-credentials",
+      version: "v4",
+      ...props,
+    });
+
+    // Validate AWS region
+    if (!validAwsRegions.includes(props.awsRegion)) {
+      throw new Error(`Invalid AWS region specified: ${props.awsRegion}`);
+    }
 
     this.awsRegion = props.awsRegion;
     this.roleToAssume = props.roleToAssume;
@@ -150,17 +164,14 @@ export class ConfigureAwsCredentialsV4 extends Action {
   }
 
   /**
-   * Binds the action to a job by adding it as a step in the GitHub Actions workflow.
+   * Creates a regular step to configure AWS credentials within a job.
    *
-   * Performs validation on the AWS region and adds step parameters based on the specified properties.
-   *
-   * @param job - The job to which the action is bound.
-   * @returns The configured `RegularStep` instance for the GitHub Actions job.
+   * @returns A RegularStep configured for AWS credentials.
    */
-  public bind(job: Job): RegularStep {
-    const step = job.addRegularStep(this.id, {
-      name: this.renderName(),
-      uses: this.renderUses("aws-actions/configure-aws-credentials"),
+  protected createRegularStep(): RegularStep {
+    return new RegularStep(this, this.id, {
+      name: this.name,
+      uses: this.uses,
       parameters: {
         "aws-region": this.awsRegion,
         "role-to-assume": this.roleToAssume,
@@ -173,30 +184,12 @@ export class ConfigureAwsCredentialsV4 extends Action {
         "output-credentials": this.outputCredentials,
       },
     });
-
-    // Add validation for AWS region
-    step.node.addValidation({
-      validate: () => {
-        const errors: string[] = [];
-
-        if (!validAwsRegions.includes(this.awsRegion)) {
-          errors.push(`Invalid AWS region specified: ${this.awsRegion}`);
-        }
-
-        return errors;
-      },
-    });
-
-    return step;
   }
 
   /**
-   * Retrieves the outputs of the Configure AWS Credentials action.
+   * Retrieves the outputs of the Configure AWS Credentials action, accessible for use in subsequent workflow steps.
    *
-   * This method returns an object containing output values that can be referenced in subsequent steps,
-   * such as the account ID and session keys.
-   *
-   * @returns An object with the configured output credentials.
+   * @returns AWS credentials outputs including account ID, access key, secret key, and session token.
    */
   public get outputs(): ConfigureAwsCredentialsV4Outputs {
     return {

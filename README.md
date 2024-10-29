@@ -39,37 +39,37 @@ Here's a simple example of how to create a GitHub Actions workflow using `github
 import { PermissionLevel, Project } from 'github-actions-cdk';
 import { CheckoutV4, SetupNodeV4 } from 'github-actions-cdk/actions';
 
-const project = new Project();
-
-const workflow = project.addWorkflow('build', {
-    name: "Build",
-    triggers: {
-        push: { branches: ['main'] },
-        workflowDispatch: {}
-    },
-    permissions: {
-        contents: PermissionLevel.READ,
-    }
+const project = new Project({
+  //additionalChecks: true,
 });
 
-const job = workflow.addJob('build', {
-	env: {
-		CI: 'true',
-	},
+const workflow = project.addWorkflow("build", {
+  name: "Build",
+  triggers: {
+    push: { branches: ["main"] },
+    workflowDispatch: {},
+  },
+  permissions: {
+    contents: PermissionLevel.READ,
+  },
 });
 
-job.addAction(
-  new CheckoutV4("checkout", {
-    name: "Checkout Code",
-  }),
-);
+const job = workflow.addJob("build", {
+  env: {
+    CI: "true",
+  },
+});
 
-job.addAction(
-  new SetupNodeV4("setup-node", {
-    name: "Set up Node.js",
-    nodeVersion: "20.x",
-  }),
-);
+new CheckoutV4(job, "checkout", {
+  name: "Checkout Code",
+});
+
+const setupNode = new SetupNodeV4(job, "setup-node", {
+  name: "Set up Node.js",
+  nodeVersion: "20.x",
+});
+
+job.addOutput("node-version", setupNode.outputs.nodeVersion);
 
 project.synth();
 ```
@@ -83,10 +83,11 @@ from github_actions_cdk import Project, PermissionLevel
 from github_actions_cdk.actions import CheckoutV4, SetupNodeV4
 
 project = Project(
-    outdir="examples/python/.github/workflows",
+    #additional_checks=True,
 )
 
-workflow = project.add_workflow("build",
+workflow = project.add_workflow(
+    id="build",
     name="Build",
     triggers={
         "push": {
@@ -98,24 +99,27 @@ workflow = project.add_workflow("build",
     }
 )
 
-job = workflow.add_job("build",
+job = workflow.add_job(
+    id="build",
     env={
         "CI": "true",
     },
 )
 
-job.add_action(
-    CheckoutV4("checkout",
-        name="Checkout Code",
-    ),
+CheckoutV4(
+    scope=job,
+    id="checkout",
+    name="Checkout Code",
 )
 
-job.add_action(
-    SetupNodeV4("setup-node",
-        name="Set up Node.js",
-        node_version="20.x",
-    ),
+setup_node = SetupNodeV4(
+    scope=job, 
+    id="setup-node",    
+    name="Set up Node.js",
+    node_version="14.x",
 )
+
+job.add_output("node-version", setup_node.outputs.node_version)
                                
 project.synth()
 ```

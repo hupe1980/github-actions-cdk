@@ -1,5 +1,3 @@
-// tests/step.test.ts
-
 import { RootConstruct } from "constructs";
 import { RegularStep, RunStep, parseExternalActionName } from "../src";
 import { cleanObject } from "../src/private/utils";

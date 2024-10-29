@@ -189,7 +189,7 @@ export class Workflow extends Component {
    * @returns True if the workflow has one or more jobs; otherwise, false.
    */
   public hasJobs(): boolean {
-    return this.node.children.some((child) => Job.isJob(child));
+    return this.node.findAll().some((child) => Job.isJob(child));
   }
 
   /**

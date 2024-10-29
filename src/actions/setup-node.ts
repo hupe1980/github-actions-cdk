@@ -1,21 +1,20 @@
-import { Action, type ActionProps } from "../action"; // Adjust path as needed
-import type { Job } from "../job";
-import type { RegularStep } from "../step";
+import type { IConstruct } from "constructs";
+import { Action, type CommonActionProps } from "../action";
+import { RegularStep } from "../step";
 
 /**
- * Output structure for the Setup Node.js action.
+ * Outputs from the Setup Node.js action.
  *
- * Contains specific outputs related to the Node.js setup process, including
- * the installed Node.js version and cache hit status.
+ * This interface includes key output values such as the Node.js version installed and whether a cache was used.
  */
 export interface SetupNodeV4Outputs {
   /**
-   * A boolean value represented as a string indicating if a cache was hit.
+   * Indicates if a cache was successfully hit during the action.
    */
   readonly cacheHit: string;
 
   /**
-   * The version of Node.js that was installed by the action.
+   * The version of Node.js that was installed.
    */
   readonly nodeVersion: string;
 }
@@ -23,132 +22,120 @@ export interface SetupNodeV4Outputs {
 /**
  * Properties for configuring the Setup Node.js action within a GitHub Actions workflow.
  *
- * This interface extends ActionProps to include specific inputs for the Setup Node.js
- * action, enabling custom configurations for Node.js version, caching, and authentication.
+ * This interface extends common action properties to include options specific to Node.js setup,
+ * such as versioning, caching, and registry authentication.
  */
-export interface SetupNodeV4Props extends ActionProps {
+export interface SetupNodeV4Props extends CommonActionProps {
   /**
-   * Enables `always-auth` in the npmrc configuration to always require authentication.
-   *
-   * @default false
+   * If true, forces authentication to the npm registry even when installing public packages.
    */
   readonly alwaysAuth?: boolean;
 
   /**
-   * Version specification of Node.js to use, following SemVer notation.
-   * Supports various aliases, such as `lts/*` for long-term support versions,
-   * as well as specific builds.
-   *
-   * @example "12.x", "10.15.1", ">=10.15.0", "lts/Hydrogen", "16-nightly", "latest", "node"
+   * The version of Node.js to use, specified as a version range or exact version.
    */
   readonly nodeVersion: string;
 
   /**
-   * Optional file containing the Node.js version specification, typically used by version managers.
-   *
-   * @example "package.json", ".nvmrc", ".node-version", ".tool-versions"
+   * Optional path to a file containing the Node.js version to use.
+   * This is useful for dynamically specifying versions.
    */
   readonly nodeVersionFile?: string;
 
   /**
-   * Target system architecture for the Node.js installation.
-   *
-   * @example "x86" | "x64" - Defaults to the system architecture if not specified.
+   * The target architecture for the Node.js installation (e.g., `x64` or `arm64`).
    */
   readonly architecture?: string;
 
   /**
-   * When set to `true`, checks for the latest available Node.js version that matches the specified version.
+   * If true, checks for the latest version matching the specified version.
    *
    * @default false
    */
   readonly checkLatest?: boolean;
 
   /**
-   * Optional URL of the registry for configuring authentication. This URL is used to set up a project-level
-   * `.npmrc` and `.yarnrc` file, allowing authentication through the `NODE_AUTH_TOKEN` environment variable.
+   * The URL of the npm registry to authenticate against.
    */
   readonly registryUrl?: string;
 
   /**
-   * Optional scope for authentication against scoped registries. If unspecified,
-   * defaults to the repository owner when using GitHub Packages.
+   * Scope for the npm packages, useful for scoped packages in the registry.
    */
-  readonly scope?: string;
+  readonly npmPackageScope?: string;
 
   /**
-   * Token used to fetch Node.js distributions. Defaults to `github.token` on GitHub.com.
-   * For GitHub Enterprise Server (GHES), a personal access token may be used to avoid rate limiting.
-   *
-   * @default github.server_url === "https://github.com" ? github.token : ""
+   * Token for authentication with the npm registry.
    */
   readonly token?: string;
 
   /**
-   * Specifies the package manager to use for caching dependencies in the default directory.
-   * Supported values include `"npm"`, `"yarn"`, and `"pnpm"`.
+   * The package manager to use for caching (`npm`, `yarn`, or `pnpm`).
    */
   readonly cache?: "npm" | "yarn" | "pnpm";
 
   /**
-   * Path to the dependency file used for caching. Supports individual file paths and wildcards to match multiple files.
-   *
-   * @example "package-lock.json", "yarn.lock"
+   * Optional path to dependency files for caching.
+   * This allows caching of multiple dependencies efficiently.
    */
   readonly cacheDependencyPath?: string;
 }
 
 /**
- * Class representing the Setup Node.js action, allowing configuration of the Node.js version,
- * registry settings, caching, and more within a GitHub Actions workflow.
+ * Class representing the Setup Node.js action in a GitHub Actions workflow.
+ *
+ * This action configures Node.js version, caching, registry settings, and more to facilitate builds.
  */
 export class SetupNodeV4 extends Action {
   public readonly alwaysAuth?: boolean;
   public readonly nodeVersion: string;
   public readonly nodeVersionFile?: string;
   public readonly architecture?: string;
-  public readonly checkLatest?: boolean;
+  public readonly checkLatest: boolean;
   public readonly registryUrl?: string;
-  public readonly scope?: string;
+  public readonly npmPackageScope?: string;
   public readonly token?: string;
   public readonly cache?: "npm" | "yarn" | "pnpm";
   public readonly cacheDependencyPath?: string;
 
   /**
-   * Initializes a new instance of the `SetupNode` action with the specified properties.
+   * Initializes a new instance of the Setup Node.js action.
    *
+   * @param scope - Scope in which this construct is defined.
    * @param id - A unique identifier for the action instance.
-   * @param props - Properties for configuring the Setup Node.js action, including version,
-   * authentication, and caching settings.
+   * @param props - Properties for configuring Node.js setup, including version and cache settings.
    */
-  constructor(id: string, props: SetupNodeV4Props) {
-    super(id, { version: "v4", ...props });
+  constructor(scope: IConstruct, id: string, props: SetupNodeV4Props) {
+    super(scope, id, {
+      actionIdentifier: "actions/setup-node",
+      version: "v4",
+      ...props,
+    });
 
     this.alwaysAuth = props.alwaysAuth;
     this.nodeVersion = props.nodeVersion;
     this.nodeVersionFile = props.nodeVersionFile;
     this.architecture = props.architecture;
-    this.checkLatest = props.checkLatest;
+    this.checkLatest = props.checkLatest ?? false;
     this.registryUrl = props.registryUrl;
-    this.scope = props.scope;
+    this.npmPackageScope = props.npmPackageScope;
     this.token = props.token;
     this.cache = props.cache;
     this.cacheDependencyPath = props.cacheDependencyPath;
   }
 
   /**
-   * Binds the action to a job by adding it as a step in the GitHub Actions workflow.
+   * Creates a regular step for the Setup Node.js action.
    *
-   * This method configures the action's parameters and integrates it into the specified job,
-   * making it a part of the workflow execution.
+   * This method sets up the parameters for the action and prepares it to be
+   * executed in the workflow.
    *
-   * @param job - The job to which the action will be bound.
-   * @returns The configured `RegularStep` for the GitHub Actions job, allowing the action to run within the workflow.
+   * @returns The configured RegularStep for the GitHub Actions job.
    */
-  public bind(job: Job): RegularStep {
-    return job.addRegularStep(this.id, {
-      name: this.renderName(),
-      uses: this.renderUses("actions/setup-node"),
+  protected createRegularStep(): RegularStep {
+    return new RegularStep(this, this.id, {
+      name: this.name,
+      uses: this.uses,
       parameters: {
         "always-auth": this.alwaysAuth,
         "node-version": this.nodeVersion,
@@ -156,7 +143,7 @@ export class SetupNodeV4 extends Action {
         architecture: this.architecture,
         "check-latest": this.checkLatest,
         "registry-url": this.registryUrl,
-        scope: this.scope,
+        scope: this.npmPackageScope,
         token: this.token,
         cache: this.cache,
         "cache-dependency-path": this.cacheDependencyPath,
@@ -165,12 +152,9 @@ export class SetupNodeV4 extends Action {
   }
 
   /**
-   * Retrieves the outputs of the Setup Node.js action as specified in the GitHub Actions context.
+   * Retrieves outputs from the Setup Node.js action for use in subsequent workflow steps.
    *
-   * This method returns an object containing output values that can be referenced in subsequent
-   * steps of the workflow, such as the installed Node.js version and cache hit status.
-   *
-   * @returns An object containing the output values of the action, including the cache hit status and the Node.js version.
+   * @returns The Setup Node.js action's outputs, including `cacheHit` and `nodeVersion`.
    */
   public get outputs(): SetupNodeV4Outputs {
     return {

@@ -1,99 +1,115 @@
-import type { Job } from "./job";
+import { Construct, type IConstruct } from "constructs";
 import type { RegularStep } from "./step";
 
 /**
- * Configuration properties for a GitHub Action.
+ * Base configuration properties shared by GitHub Actions.
  *
  * @remarks
- * The `ActionProps` interface defines essential properties for configuring a GitHub Action.
- * The `name` property is optional and is useful for providing a display name within workflow logs.
- * The `version` property is optional but recommended, allowing precise control over the action version.
+ * The `CommonActionProps` interface provides basic properties for configuring a GitHub Action.
+ * It includes an optional `name` property, useful for providing a display name in workflow logs.
  */
-export interface ActionProps {
+export interface CommonActionProps {
   /**
-   * Optional display name for the action, used in workflow logs for readability.
+   * Optional display name for the action, displayed in workflow logs for readability.
    *
    * @example "Checkout Repository"
    */
   readonly name?: string;
-
-  /**
-   * Specifies the version of the action to use. This can be a release tag (e.g., "v2"),
-   * a branch name, or a commit SHA, allowing for precise version control.
-   * When omitted, the latest version may be used, depending on the action's setup.
-   *
-   * @example "v2" // Uses version 2 of the action
-   */
-  readonly version?: string;
 }
 
 /**
- * Abstract base class representing a GitHub Action associated with a job in a workflow.
+ * Comprehensive configuration for defining a GitHub Action.
  *
  * @remarks
- * The `Action` class provides a foundational structure for defining GitHub Actions in workflows.
- * Each action includes a unique `id`, an optional `name` for display purposes, and an optional `version`.
- * The `bind` method must be implemented by subclasses to specify how the action integrates with a `Job`.
+ * The `ActionProps` interface extends `CommonActionProps` with properties essential
+ * for identifying and versioning a GitHub Action. This includes an `actionIdentifier`
+ * to specify the action's reference in workflows and a `version` to control the action version.
  */
-export abstract class Action {
-  /** Unique identifier for the action, required to ensure distinctness within a job context. */
-  public readonly id: string;
+export interface ActionProps extends CommonActionProps {
+  /**
+   * Identifier of the action, typically in the format of `owner/repo` (e.g., `"actions/checkout"`).
+   *
+   * @remarks
+   * This uniquely identifies the action in GitHub's action marketplace or within repositories.
+   * It is required to resolve the action's source for execution.
+   *
+   * @example "actions/checkout"
+   */
+  readonly actionIdentifier: string;
 
-  /** Optional display name for the action, used in workflow logs for clarity. */
+  /**
+   * Specifies the version of the action, allowing control over the specific release, branch, or commit SHA.
+   * If omitted, the action may use its latest default version.
+   *
+   * @example "v2" // Uses version 2 of the action
+   */
+  readonly version: string;
+}
+
+/**
+ * Abstract base class representing a GitHub Action in a workflow.
+ *
+ * @remarks
+ * The `Action` class provides a framework for defining GitHub Actions in workflows.
+ * Subclasses must implement `createRegularStep` to define steps for this action.
+ * It also offers computed properties `id` and `uses` to access the action’s identifier and version.
+ */
+export abstract class Action extends Construct {
+  /** Optional display name for the action, displayed in workflow logs for clarity. */
   public readonly name?: string;
 
-  /** Version of the action, specifying the particular variant to execute in the workflow. */
-  public readonly version?: string;
+  /** Unique identifier for the action, specifying its source in GitHub workflows. */
+  public readonly actionIdentifier: string;
+
+  /** Version of the action, specifying the variant to execute in the workflow. */
+  public readonly version: string;
+
+  /** The regular step associated with this action, representing its execution in a workflow. */
+  public readonly regularStep: RegularStep;
 
   /**
-   * Constructs a new `Action` instance with the given identifier and properties.
+   * Constructs a new instance of the `Action` class.
    *
-   * @param id - A unique identifier for the action within a job's context.
-   * @param props - Configuration properties for the action, including optional `name` and `version`.
+   * @param scope - The scope in which this action is defined.
+   * @param id - A unique identifier for this action within the construct tree.
+   * @param props - Configuration properties for the action, including its identifier and version.
    */
-  constructor(id: string, props: ActionProps) {
-    this.id = id;
+  constructor(scope: IConstruct, id: string, props: ActionProps) {
+    super(scope, id);
+
     this.name = props.name;
+    this.actionIdentifier = props.actionIdentifier;
     this.version = props.version;
+
+    // Initialize the action by creating the associated RegularStep
+    this.regularStep = this.createRegularStep();
   }
 
   /**
-   * Integrates the action with a specified job within the workflow.
+   * Creates a `RegularStep` associated with this action.
    *
    * @remarks
-   * This abstract method must be implemented by subclasses to define how the action
-   * is configured within a `Job`. It should return a `RegularStep` representing the
-   * action’s execution as a step within the job.
-   *
-   * @param job - The `Job` object to which this action is bound, allowing it to run within that job.
-   * @returns A `RegularStep` instance, representing the action as a configured step within the job.
+   * This method must be implemented by subclasses to specify the details of the workflow step(s)
+   * executed by this action. The resulting `RegularStep` integrates the action's behavior in the workflow.
    */
-  public abstract bind(job: Job): RegularStep;
+  protected abstract createRegularStep(): RegularStep;
 
   /**
-   * Constructs the formatted `uses` string required by GitHub Actions, incorporating the action identifier
-   * and optional version.
+   * Retrieves the unique identifier of this action within the construct tree.
    *
-   * @remarks
-   * This method handles conditional inclusion of the `version` field in the `uses` string.
-   *
-   * @param actionIdentifier - The identifier of the GitHub Action to use, e.g., "actions/checkout".
-   * @returns The formatted `uses` string, including the action identifier and version if specified.
+   * @returns A string representing the action's unique ID.
    */
-  protected renderUses(actionIdentifier: string): string {
-    return `${actionIdentifier}${this.version ? `@${this.version}` : ""}`;
+  get id(): string {
+    return this.node.id;
   }
 
   /**
-   * Retrieves the display name of the action, if specified.
+   * Generates the `uses` string in GitHub Actions syntax, combining the action identifier and version.
    *
-   * @remarks
-   * This method is useful for accessing the `name` property in a standardized manner, which can
-   * enhance workflow readability. If `name` is not defined, it returns `undefined`.
-   *
-   * @returns The display name of the action, or `undefined` if no name is set.
+   * @returns A string in the format `identifier@version`, used to specify the action in workflows.
+   * @example "actions/checkout@v2"
    */
-  protected renderName(): string | undefined {
-    return this.name;
+  get uses(): string {
+    return `${this.actionIdentifier}${this.version ? `@${this.version}` : ""}`;
   }
 }
