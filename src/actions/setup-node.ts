@@ -1,32 +1,32 @@
-import { Action, type ActionProps } from "../action";
+import { Action, type ActionProps } from "../action"; // Adjust path as needed
 import type { Job } from "../job";
 import type { RegularStep } from "../step";
 
 /**
  * Output structure for the Setup Node.js action.
  *
- * Extends from ActionOutputs to include specific outputs related to
- * the Node.js setup process.
+ * Contains specific outputs related to the Node.js setup process, including
+ * the installed Node.js version and cache hit status.
  */
-export interface SetupNodeOutputs {
+export interface SetupNodeV4Outputs {
   /**
    * A boolean value represented as a string indicating if a cache was hit.
    */
   readonly cacheHit: string;
 
   /**
-   * The version of Node.js that was installed.
+   * The version of Node.js that was installed by the action.
    */
   readonly nodeVersion: string;
 }
 
 /**
- * Properties for configuring the Setup Node.js action in a GitHub Actions workflow.
+ * Properties for configuring the Setup Node.js action within a GitHub Actions workflow.
  *
- * This interface extends ActionProps to include specific inputs for the
- * Setup Node.js action, such as version specifications and authentication settings.
+ * This interface extends ActionProps to include specific inputs for the Setup Node.js
+ * action, enabling custom configurations for Node.js version, caching, and authentication.
  */
-export interface SetupNodeProps extends ActionProps {
+export interface SetupNodeV4Props extends ActionProps {
   /**
    * Enables `always-auth` in the npmrc configuration to always require authentication.
    *
@@ -35,7 +35,7 @@ export interface SetupNodeProps extends ActionProps {
   readonly alwaysAuth?: boolean;
 
   /**
-   * Version specification of Node.js to use in SemVer notation.
+   * Version specification of Node.js to use, following SemVer notation.
    * Supports various aliases, such as `lts/*` for long-term support versions,
    * as well as specific builds.
    *
@@ -44,7 +44,7 @@ export interface SetupNodeProps extends ActionProps {
   readonly nodeVersion: string;
 
   /**
-   * File containing the Node.js version specification, typically used by version managers.
+   * Optional file containing the Node.js version specification, typically used by version managers.
    *
    * @example "package.json", ".nvmrc", ".node-version", ".tool-versions"
    */
@@ -99,10 +99,10 @@ export interface SetupNodeProps extends ActionProps {
 }
 
 /**
- * Class representing a Node.js setup action, allowing configuration of the Node.js version,
+ * Class representing the Setup Node.js action, allowing configuration of the Node.js version,
  * registry settings, caching, and more within a GitHub Actions workflow.
  */
-export class SetupNode extends Action {
+export class SetupNodeV4 extends Action {
   public readonly alwaysAuth?: boolean;
   public readonly nodeVersion: string;
   public readonly nodeVersionFile?: string;
@@ -111,17 +111,18 @@ export class SetupNode extends Action {
   public readonly registryUrl?: string;
   public readonly scope?: string;
   public readonly token?: string;
-  public readonly cache?: string;
+  public readonly cache?: "npm" | "yarn" | "pnpm";
   public readonly cacheDependencyPath?: string;
 
   /**
-   * Initializes a new instance of the `SetupNode` action.
+   * Initializes a new instance of the `SetupNode` action with the specified properties.
    *
    * @param id - A unique identifier for the action instance.
-   * @param props - Properties for configuring the Setup Node.js action.
+   * @param props - Properties for configuring the Setup Node.js action, including version,
+   * authentication, and caching settings.
    */
-  constructor(id: string, props: SetupNodeProps) {
-    super(id, props);
+  constructor(id: string, props: SetupNodeV4Props) {
+    super(id, { version: "v4", ...props });
 
     this.alwaysAuth = props.alwaysAuth;
     this.nodeVersion = props.nodeVersion;
@@ -141,13 +142,13 @@ export class SetupNode extends Action {
    * This method configures the action's parameters and integrates it into the specified job,
    * making it a part of the workflow execution.
    *
-   * @param job - The job to bind the action to.
-   * @returns The configured `RegularStep` for the GitHub Actions job.
+   * @param job - The job to which the action will be bound.
+   * @returns The configured `RegularStep` for the GitHub Actions job, allowing the action to run within the workflow.
    */
   public bind(job: Job): RegularStep {
     return job.addRegularStep(this.id, {
-      name: this.name,
-      uses: `actions/setup-node@${this.version}`,
+      name: this.renderName(),
+      uses: this.renderUses("actions/setup-node"),
       parameters: {
         "always-auth": this.alwaysAuth,
         "node-version": this.nodeVersion,
@@ -164,14 +165,14 @@ export class SetupNode extends Action {
   }
 
   /**
-   * Retrieves the outputs of the SetupNode action as specified in the GitHub Actions context.
+   * Retrieves the outputs of the Setup Node.js action as specified in the GitHub Actions context.
    *
    * This method returns an object containing output values that can be referenced in subsequent
    * steps of the workflow, such as the installed Node.js version and cache hit status.
    *
-   * @returns An object containing the output values of the action.
+   * @returns An object containing the output values of the action, including the cache hit status and the Node.js version.
    */
-  public get outputs(): SetupNodeOutputs {
+  public get outputs(): SetupNodeV4Outputs {
     return {
       cacheHit: `\${{ steps.${this.id}.outputs.cache-hit }}`,
       nodeVersion: `\${{ steps.${this.id}.outputs.node-version }}`,

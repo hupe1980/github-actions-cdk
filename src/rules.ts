@@ -82,11 +82,6 @@ export function validateShellType(
 export function validateUsesFormat(uses: string): string[] {
   const errors: string[] = [];
 
-  // Check length constraint
-  if (uses.length >= 100) {
-    errors.push(`The 'uses' field '${uses}' is invalid. It must be less than 100 characters.`);
-  }
-
   // Regex patterns for validation
   const githubActionPattern =
     /^([a-zA-Z0-9-_]+)\/([a-zA-Z0-9-_]+)(\/([a-zA-Z0-9-_\/]+))?@([a-zA-Z0-9-_\.]+)/; // {owner}/{repo}@{ref} or {owner}/{repo}/{path}@{ref}

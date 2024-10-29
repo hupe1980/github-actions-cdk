@@ -1,5 +1,5 @@
 import { PermissionLevel, Project } from "../../src";
-import { Checkout, SetupNode } from "../../src/actions";
+import { CheckoutV4, SetupNodeV4 } from "../../src/actions";
 
 const project = new Project({
   //additionalChecks: true,
@@ -24,16 +24,14 @@ const job = workflow.addJob("build", {
 });
 
 job.addAction(
-  new Checkout("checkout", {
+  new CheckoutV4("checkout", {
     name: "Checkout Code",
-    version: "v4",
   }),
 );
 
 job.addAction(
-  new SetupNode("setup-node", {
+  new SetupNodeV4("setup-node", {
     name: "Set up Node.js",
-    version: "v4",
     nodeVersion: "20.x",
   }),
 );

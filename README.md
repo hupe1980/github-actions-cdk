@@ -37,7 +37,7 @@ Here's a simple example of how to create a GitHub Actions workflow using `github
 
 ```typescript
 import { PermissionLevel, Project } from 'github-actions-cdk';
-import { Checkout, SetupNode } from 'github-actions-cdk/actions';
+import { CheckoutV4, SetupNodeV4 } from 'github-actions-cdk/actions';
 
 const project = new Project();
 
@@ -59,16 +59,14 @@ const job = workflow.addJob('build', {
 });
 
 job.addAction(
-  new Checkout("checkout", {
+  new CheckoutV4("checkout", {
     name: "Checkout Code",
-    version: "v4",
   }),
 );
 
 job.addAction(
-  new SetupNode("setup-node", {
+  new SetupNodeV4("setup-node", {
     name: "Set up Node.js",
-    version: "v4",
     nodeVersion: "20.x",
   }),
 );
@@ -82,7 +80,7 @@ Here's how to create a GitHub Actions workflow using `github-actions-cdk` in Pyt
 
 ```python
 from github_actions_cdk import Project, PermissionLevel
-from github_actions_cdk.actions import Checkout, SetupNode
+from github_actions_cdk.actions import CheckoutV4, SetupNodeV4
 
 project = Project(
     outdir="examples/python/.github/workflows",
@@ -107,16 +105,14 @@ job = workflow.add_job("build",
 )
 
 job.add_action(
-    Checkout("checkout",
+    CheckoutV4("checkout",
         name="Checkout Code",
-        version="v4",
     ),
 )
 
 job.add_action(
-    SetupNode("setup-node",
+    SetupNodeV4("setup-node",
         name="Set up Node.js",
-        version="v4",
         node_version="20.x",
     ),
 )
