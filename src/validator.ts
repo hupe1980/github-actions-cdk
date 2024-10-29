@@ -63,6 +63,11 @@ export class WorkflowValidator extends Validator {
    * Validates the workflow's environment variables.
    */
   public validate(): void {
+    if (this.workflow.triggers.schedule) {
+      this.addErrors(
+        rules.validateCronExpression(this.workflow.triggers.schedule.map((v) => v.cron.toString())),
+      );
+    }
     if (this.workflow.env) this.addErrors(rules.validateEnvVars(this.workflow.env));
     if (this.workflow.defaults?.run?.shell)
       this.addErrors(rules.validateShellType(this.workflow.defaults.run.shell, validShells));

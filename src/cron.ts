@@ -50,6 +50,106 @@ export class Cron {
     month: "1",
   });
 
+  /**
+   * Validates a POSIX cron expression string, checking adherence to constraints for each field.
+   * @param expression A cron expression string to validate (5 fields).
+   * @returns True if the cron expression is valid, otherwise false.
+   */
+  public static isValidExpression(expression: string): boolean {
+    const fields = expression.split(" ");
+    if (fields.length !== 5) {
+      return false;
+    }
+
+    /**
+     * Helper function to validate a range of names, ensuring start is before or equal to end.
+     * @param start The starting name in the range.
+     * @param end The ending name in the range.
+     * @param names An array of allowed names (e.g., ["SUN", "MON"]).
+     * @returns True if the range is valid; false otherwise.
+     */
+    const isValidNameRange = (start: string, end: string, names: string[]): boolean => {
+      const startIndex = names.indexOf(start);
+      const endIndex = names.indexOf(end);
+      return startIndex !== -1 && endIndex !== -1 && startIndex <= endIndex;
+    };
+
+    /**
+     * Validates individual cron field values based on numeric ranges or allowed names.
+     * Supports '*', ',' for lists, '-' for ranges, and '/' for step values.
+     * @param field The cron field to validate.
+     * @param min The minimum numeric value allowed.
+     * @param max The maximum numeric value allowed.
+     * @param allowNames An optional list of allowed names for the field.
+     * @returns True if the field is valid; false otherwise.
+     */
+    const checkField = (
+      field: string,
+      min: number,
+      max: number,
+      allowNames: string[] = [],
+    ): boolean => {
+      if (field === "*") return true;
+
+      const regex = new RegExp(`^([0-9${allowNames.join("")},*/-]+)$`);
+      if (!regex.test(field)) return false;
+
+      const parts = field.split(",");
+      for (const part of parts) {
+        if (part.includes("/")) {
+          const [range, step] = part.split("/");
+          if (!range || Number.isNaN(Number(step))) return false;
+        } else if (part.includes("-")) {
+          const [start, end] = part.split("-");
+          const isNamedRange = allowNames.includes(start) && allowNames.includes(end);
+          const startNum = Number(start);
+          const endNum = Number(end);
+
+          // Check for named range validity
+          if (isNamedRange && !isValidNameRange(start, end, allowNames)) {
+            return false;
+          }
+
+          // Check for numeric range validity
+          if (
+            !isNamedRange &&
+            (Number.isNaN(startNum) || Number.isNaN(endNum) || startNum < min || endNum > max)
+          ) {
+            return false;
+          }
+        } else {
+          const partNum = Number(part);
+          if (Number.isNaN(partNum) && !allowNames.includes(part)) return false;
+          if (!Number.isNaN(partNum) && (partNum < min || partNum > max)) return false;
+        }
+      }
+      return true;
+    };
+
+    const [minute, hour, day, month, weekDay] = fields;
+
+    return (
+      checkField(minute, 0, 59) &&
+      checkField(hour, 0, 23) &&
+      checkField(day, 1, 31) &&
+      checkField(month, 1, 12, [
+        "JAN",
+        "FEB",
+        "MAR",
+        "APR",
+        "MAY",
+        "JUN",
+        "JUL",
+        "AUG",
+        "SEP",
+        "OCT",
+        "NOV",
+        "DEC",
+      ]) &&
+      checkField(weekDay, 0, 6, ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"])
+    );
+  }
+
   // Cron fields representing minute, hour, day, month, and weekday expressions
   public readonly minute: string;
   public readonly hour: string;
@@ -123,104 +223,4 @@ export class Cron {
       }
     }
   }
-}
-
-/**
- * Validates a POSIX cron expression string, checking adherence to constraints for each field.
- * @param expression A cron expression string to validate (5 fields).
- * @returns True if the cron expression is valid, otherwise false.
- */
-export function isValidCronExpression(expression: string): boolean {
-  const fields = expression.split(" ");
-  if (fields.length !== 5) {
-    return false;
-  }
-
-  /**
-   * Helper function to validate a range of names, ensuring start is before or equal to end.
-   * @param start The starting name in the range.
-   * @param end The ending name in the range.
-   * @param names An array of allowed names (e.g., ["SUN", "MON"]).
-   * @returns True if the range is valid; false otherwise.
-   */
-  const isValidNameRange = (start: string, end: string, names: string[]): boolean => {
-    const startIndex = names.indexOf(start);
-    const endIndex = names.indexOf(end);
-    return startIndex !== -1 && endIndex !== -1 && startIndex <= endIndex;
-  };
-
-  /**
-   * Validates individual cron field values based on numeric ranges or allowed names.
-   * Supports '*', ',' for lists, '-' for ranges, and '/' for step values.
-   * @param field The cron field to validate.
-   * @param min The minimum numeric value allowed.
-   * @param max The maximum numeric value allowed.
-   * @param allowNames An optional list of allowed names for the field.
-   * @returns True if the field is valid; false otherwise.
-   */
-  const checkField = (
-    field: string,
-    min: number,
-    max: number,
-    allowNames: string[] = [],
-  ): boolean => {
-    if (field === "*") return true;
-
-    const regex = new RegExp(`^([0-9${allowNames.join("")},*/-]+)$`);
-    if (!regex.test(field)) return false;
-
-    const parts = field.split(",");
-    for (const part of parts) {
-      if (part.includes("/")) {
-        const [range, step] = part.split("/");
-        if (!range || Number.isNaN(Number(step))) return false;
-      } else if (part.includes("-")) {
-        const [start, end] = part.split("-");
-        const isNamedRange = allowNames.includes(start) && allowNames.includes(end);
-        const startNum = Number(start);
-        const endNum = Number(end);
-
-        // Check for named range validity
-        if (isNamedRange && !isValidNameRange(start, end, allowNames)) {
-          return false;
-        }
-
-        // Check for numeric range validity
-        if (
-          !isNamedRange &&
-          (Number.isNaN(startNum) || Number.isNaN(endNum) || startNum < min || endNum > max)
-        ) {
-          return false;
-        }
-      } else {
-        const partNum = Number(part);
-        if (Number.isNaN(partNum) && !allowNames.includes(part)) return false;
-        if (!Number.isNaN(partNum) && (partNum < min || partNum > max)) return false;
-      }
-    }
-    return true;
-  };
-
-  const [minute, hour, day, month, weekDay] = fields;
-
-  return (
-    checkField(minute, 0, 59) &&
-    checkField(hour, 0, 23) &&
-    checkField(day, 1, 31) &&
-    checkField(month, 1, 12, [
-      "JAN",
-      "FEB",
-      "MAR",
-      "APR",
-      "MAY",
-      "JUN",
-      "JUL",
-      "AUG",
-      "SEP",
-      "OCT",
-      "NOV",
-      "DEC",
-    ]) &&
-    checkField(weekDay, 0, 6, ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"])
-  );
 }

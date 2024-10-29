@@ -1,3 +1,4 @@
+import { Cron } from "./cron";
 import type { Job } from "./job";
 import type { Workflow } from "./workflow";
 
@@ -20,6 +21,27 @@ export function validateIdFormat(id: string): string[] {
     errors.push(
       `The identifier '${id}' is invalid. IDs may only contain alphanumeric characters, '_' and '-'. IDs must start with a letter or '_'.`,
     );
+  }
+
+  return errors;
+}
+
+/**
+ * Validates an array of cron expressions.
+ *
+ * This function checks each cron expression in the provided array to determine
+ * if it is valid. If an expression is invalid, an error message will be added
+ * to the result array.
+ *
+ * @param expresiions - An array of cron expressions as strings to be validated.
+ * @returns An array of error messages for any invalid cron expressions.
+ */
+export function validateCronExpression(expresiions: string[]): string[] {
+  const errors: string[] = [];
+  for (const expresiion of expresiions) {
+    if (!Cron.isValidExpression(expresiion)) {
+      errors.push(`The cron expression '${expresiion}' is invalid.`);
+    }
   }
 
   return errors;

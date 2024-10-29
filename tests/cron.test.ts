@@ -1,4 +1,4 @@
-import { Cron, type CronOptions, isValidCronExpression } from "../src";
+import { Cron, type CronOptions } from "../src";
 
 describe("Cron Class", () => {
   describe("constructor", () => {
@@ -97,7 +97,7 @@ describe("isValidCronExpression", () => {
     ["0 0 * * *", true], // Every day at midnight
     ["0 0 * 8 *", true], // Every day in August at midnight
   ])("returns %p for valid cron expression %s", (expression, expected) => {
-    expect(isValidCronExpression(expression)).toBe(expected);
+    expect(Cron.isValidExpression(expression)).toBe(expected);
   });
 
   // Invalid cron expressions
@@ -117,6 +117,6 @@ describe("isValidCronExpression", () => {
     ["*/3 * * * 7", false], // Valid but testing '7' which should be '0' for Sunday
     ["* * * * * *", false], // Too many fields (should be 5)
   ])("returns %p for invalid cron expression %s", (expression, expected) => {
-    expect(isValidCronExpression(expression)).toBe(expected);
+    expect(Cron.isValidExpression(expression)).toBe(expected);
   });
 });
