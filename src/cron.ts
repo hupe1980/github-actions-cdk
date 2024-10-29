@@ -15,12 +15,40 @@ export interface CronOptions {
  * It includes pre-defined schedules and supports custom cron expressions.
  */
 export class Cron {
-  // Predefined cron expressions for common scheduling intervals
-  public static readonly HOURLY = Cron.fromFields({ minute: "0" });
-  public static readonly DAILY = Cron.fromFields({ minute: "0", hour: "0" });
-  public static readonly WEEKLY = Cron.fromFields({ minute: "0", hour: "0", weekDay: "0" });
-  public static readonly MONTHLY = Cron.fromFields({ minute: "0", hour: "0", day: "1" });
-  public static readonly YEARLY = Cron.fromFields({ minute: "0", hour: "0", day: "1", month: "1" });
+  /**
+   * A cron expression that triggers every hour, at the start of the hour.
+   * Expression: `0 * * * *` - This will run at 00:00, 01:00, 02:00, etc.
+   */
+  public static readonly HOURLY: Cron = Cron.fromFields({ minute: "0" });
+
+  /**
+   * A cron expression that triggers every day, at midnight.
+   * Expression: `0 0 * * *` - This will run every day at 00:00.
+   */
+  public static readonly DAILY: Cron = Cron.fromFields({ minute: "0", hour: "0" });
+
+  /**
+   * A cron expression that triggers every week, on Sunday at midnight.
+   * Expression: `0 0 * * 0` - This will run every Sunday at 00:00.
+   */
+  public static readonly WEEKLY: Cron = Cron.fromFields({ minute: "0", hour: "0", weekDay: "0" });
+
+  /**
+   * A cron expression that triggers on the first day of every month at midnight.
+   * Expression: `0 0 1 * *` - This will run on the first day of every month at 00:00.
+   */
+  public static readonly MONTHLY: Cron = Cron.fromFields({ minute: "0", hour: "0", day: "1" });
+
+  /**
+   * A cron expression that triggers once a year, on January 1st at midnight.
+   * Expression: `0 0 1 1 *` - This will run on January 1st every year at 00:00.
+   */
+  public static readonly YEARLY: Cron = Cron.fromFields({
+    minute: "0",
+    hour: "0",
+    day: "1",
+    month: "1",
+  });
 
   // Cron fields representing minute, hour, day, month, and weekday expressions
   public readonly minute: string;

@@ -7,6 +7,7 @@ import { Job, type JobProps } from "./job";
 import type { Permissions } from "./permissions";
 import { snakeCaseKeys } from "./private/utils";
 import { type IWorkflowSynthesizer, WorkflowSynthesizer } from "./synthesizer";
+import { WorkflowValidator } from "./validator";
 
 /**
  * Options for configuring CRON schedule.
@@ -483,7 +484,7 @@ export class Workflow extends Component {
    * @param props.concurrency - Concurrency settings for the workflow.
    * @param props.synthesizer - Custom synthesizer for rendering the workflow YAML.
    */
-  constructor(scope: IConstruct, id: string, props: WorkflowProps) {
+  constructor(scope: IConstruct, id: string, props: WorkflowProps = {}) {
     super(scope, id);
 
     this.synthesizer = props.synthesizer ?? new WorkflowSynthesizer(this);
@@ -503,6 +504,14 @@ export class Workflow extends Component {
         cancelInProgress: props.concurrency.cancelInProgress ?? false,
       };
     }
+
+    this.node.addValidation({
+      validate: () => {
+        const validator = new WorkflowValidator(this);
+        validator.validate();
+        return validator.errors;
+      },
+    });
   }
 
   /**
@@ -521,8 +530,22 @@ export class Workflow extends Component {
    * @param props - The properties for configuring the job.
    * @returns The created Job instance.
    */
-  public addJob(id: string, props: JobProps): Job {
+  public addJob(id: string, props: JobProps = {}): Job {
     return new Job(this, id, props);
+  }
+
+  /**
+   * Checks if the current workflow contains any jobs.
+   *
+   * This method iterates through the children of the node associated with
+   * the workflow and checks if any of those children are instances of Job.
+   * If at least one child is a job, the method returns true; otherwise, it
+   * returns false.
+   *
+   * @returns True if the workflow has one or more jobs; otherwise, false.
+   */
+  public hasJobs(): boolean {
+    return this.node.children.some((child) => Job.isJob(child));
   }
 
   /**

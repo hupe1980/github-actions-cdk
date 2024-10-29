@@ -1,7 +1,8 @@
 import type { IConstruct } from "constructs";
-import { type ShellType, validShells } from "./common";
+import type { ShellType } from "./common";
 import { Component } from "./component";
 import { cleanObject } from "./private/utils";
+import { RegularStepValidator, RunStepValidator, StepBaseValidator } from "./validator";
 
 // Unique symbols to mark instances of StepBase, RunStep, and RegularStep
 const STEP_BASE_SYMBOL = Symbol.for("github-actions-cdk.StepBase");
@@ -124,6 +125,14 @@ export abstract class StepBase extends Component {
     this.env = props.env;
     this.continueOnError = props.continueOnError;
     this.timeoutMinutes = props.timeoutMinutes;
+
+    this.node.addValidation({
+      validate: () => {
+        const validator = new StepBaseValidator(this);
+        validator.validate();
+        return validator.errors;
+      },
+    });
   }
 
   /**
@@ -173,11 +182,9 @@ export class RunStep extends StepBase {
     // Validation for the shell type
     this.node.addValidation({
       validate: () => {
-        const errors: string[] = [];
-        if (this.shell && !validShells.includes(this.shell as ShellType)) {
-          errors.push(`'shell' must be one of the following: ${validShells.join(", ")}.`);
-        }
-        return errors;
+        const validator = new RunStepValidator(this);
+        validator.validate();
+        return validator.errors;
       },
     });
   }
@@ -238,6 +245,14 @@ export class RegularStep extends StepBase {
 
     this.uses = props.uses;
     this.parameters = props.parameters;
+
+    this.node.addValidation({
+      validate: () => {
+        const validator = new RegularStepValidator(this);
+        validator.validate();
+        return validator.errors;
+      },
+    });
   }
 
   /**
@@ -291,12 +306,25 @@ export class RegularStep extends StepBase {
   }
 }
 
+/**
+ * Parses the external action name into its components: owner, repo, path, and ref.
+ *
+ * The expected format can be either:
+ * - `{owner}/{repo}@{ref}` or
+ * - `{owner}/{repo}/{path}@{ref}`
+ *
+ * @param name - The string representation of the external action name.
+ * @returns An object containing the owner, repo, path (if present), and ref.
+ * @throws Error if the input string is not in a valid format.
+ */
 export function parseExternalActionName(name: string): {
   owner: string;
   repo: string;
   ref: string;
+  path?: string; // Optional path for the second format
 } {
-  const regex = /^([^\/]+)\/([^@]+)@(.+)$/;
+  // Updated regex pattern to capture owner, repo, optional path, and ref correctly
+  const regex = /^([^\/]+)\/([^@\/]+)(\/(.+))?@(.+)$/; // Optional path after the repo
   const match = name.match(regex);
 
   if (!match) {
@@ -305,9 +333,15 @@ export function parseExternalActionName(name: string): {
 
   const owner = match[1]; // The owner (e.g., "octocat")
   const repo = match[2]; // The repository name (e.g., "Hello-World")
-  const ref = match[3]; // The reference (e.g., "main", "v1.0", "a1b2c3d")
+  const path = match[4]; // The path (if it exists, otherwise undefined)
+  const ref = match[5]; // The reference (e.g., "main", "v1.0", "a1b2c3d")
 
-  return { owner, repo, ref };
+  // Validate the reference (you can customize this validation as needed)
+  if (/[^a-zA-Z0-9._-]/.test(ref)) {
+    throw new Error(`Invalid repository reference: ${name}`);
+  }
+
+  return { owner, repo, ref, path };
 }
 
 export function parseDockerActionName(name: string): { host: string; image: string; tag: string } {

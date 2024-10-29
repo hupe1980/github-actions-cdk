@@ -1,8 +1,8 @@
 // tests/step.test.ts
 
 import { RootConstruct } from "constructs";
-import { cleanObject } from "../src/private/utils"; // Ensure this utility is properly imported
-import { RegularStep, RunStep } from "../src/step"; // Adjust the import path as necessary
+import { RegularStep, RunStep, parseExternalActionName } from "../src";
+import { cleanObject } from "../src/private/utils";
 
 describe("RunStep", () => {
   let mockScope: RootConstruct;
@@ -94,5 +94,67 @@ describe("RegularStep", () => {
       continueOnError: undefined,
       timeoutMinutes: undefined,
     });
+  });
+});
+
+describe("parseExternalActionName", () => {
+  it("should parse a valid action name without a path", () => {
+    const result = parseExternalActionName("octocat/Hello-World@main");
+    expect(result).toEqual({
+      owner: "octocat",
+      repo: "Hello-World",
+      ref: "main",
+      path: undefined,
+    });
+  });
+
+  it("should parse a valid action name with a path", () => {
+    const result = parseExternalActionName("octocat/Hello-World/path/to/action@v1.0");
+    expect(result).toEqual({
+      owner: "octocat",
+      repo: "Hello-World",
+      ref: "v1.0",
+      path: "path/to/action",
+    });
+  });
+
+  it("should parse a valid action name with a path including slashes", () => {
+    const result = parseExternalActionName("octocat/Hello-World/path/to/another/action@v1.0.0");
+    expect(result).toEqual({
+      owner: "octocat",
+      repo: "Hello-World",
+      ref: "v1.0.0",
+      path: "path/to/another/action",
+    });
+  });
+
+  it("should throw an error for an invalid action name missing ref", () => {
+    expect(() => parseExternalActionName("octocat/Hello-World/")).toThrow(
+      "Invalid repository reference: octocat/Hello-World/",
+    );
+  });
+
+  it("should throw an error for an invalid action name with invalid characters", () => {
+    expect(() => parseExternalActionName("octocat/Hello-World@!invalid-ref")).toThrow(
+      "Invalid repository reference: octocat/Hello-World@!invalid-ref",
+    );
+  });
+
+  it("should throw an error for an invalid action name with missing owner", () => {
+    expect(() => parseExternalActionName("/Hello-World@main")).toThrow(
+      "Invalid repository reference: /Hello-World@main",
+    );
+  });
+
+  it("should throw an error for an invalid action name with missing repo", () => {
+    expect(() => parseExternalActionName("octocat/@main")).toThrow(
+      "Invalid repository reference: octocat/@main",
+    );
+  });
+
+  it("should throw an error for an invalid action name with no slashes", () => {
+    expect(() => parseExternalActionName("invalidActionName")).toThrow(
+      "Invalid repository reference: invalidActionName",
+    );
   });
 });

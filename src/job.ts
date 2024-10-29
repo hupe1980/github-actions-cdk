@@ -4,6 +4,7 @@ import { Component } from "./component";
 import type { Defaults } from "./defaults";
 import type { Permissions } from "./permissions";
 import { RegularStep, type RegularStepProps, RunStep, type RunStepProps, StepBase } from "./step";
+import { JobValidator } from "./validator";
 
 // Unique symbol used to mark an object as a Job
 const JOB_SYMBOL = Symbol.for("github-actions-cdk.Job");
@@ -205,7 +206,7 @@ export class Job extends Component {
    * @param id - Unique identifier for the job.
    * @param props - Configuration properties for the job.
    */
-  constructor(scope: IConstruct, id: string, props: JobProps) {
+  constructor(scope: IConstruct, id: string, props: JobProps = {}) {
     super(scope, id);
 
     Object.defineProperty(this, JOB_SYMBOL, { value: true });
@@ -229,30 +230,40 @@ export class Job extends Component {
 
     this.node.addValidation({
       validate: () => {
-        const errors: string[] = [];
-
-        if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(this.id)) {
-          errors.push(`Job id "${this.id}" is invalid. It must match ^[a-zA-Z_][a-zA-Z0-9_-]*$.`);
-        }
-
-        return errors;
+        const validator = new JobValidator(this);
+        validator.validate();
+        return validator.errors;
       },
     });
   }
 
   /** Retrieves the unique identifier for the job. */
-  get id(): string {
+  public get id(): string {
     return this.node.id;
   }
 
   /** Retrieves the job's defined outputs, if any. */
-  get outputs(): Record<string, string> | undefined {
+  public get outputs(): Record<string, string> | undefined {
     return this._outputs;
   }
 
   /** Retrieves job dependencies. */
-  get needs(): string[] {
+  public get needs(): string[] {
     return Array.from(this._needs);
+  }
+
+  /**
+   * Checks if the current job contains any steps.
+   *
+   * This method iterates through the children of the node associated with
+   * the job and checks if any of those children are instances of StepBase.
+   * If at least one child is a step, the method returns true; otherwise, it
+   * returns false.
+   *
+   * @returns True if the job has one or more steps; otherwise, false.
+   */
+  public hasSteps(): boolean {
+    return this.node.children.some((child) => StepBase.isStepBase(child));
   }
 
   /**

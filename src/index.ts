@@ -11,8 +11,10 @@ export * from "./job";
 export * from "./manifest";
 export * from "./permissions";
 export * from "./project";
+export * from "./rules";
 export * from "./step";
 export * from "./synthesizer";
+export * from "./validator";
 export * from "./workflow";
 
 // export submobules
