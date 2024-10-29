@@ -1,9 +1,9 @@
 import type { Job } from "../../src";
-import { Checkout, type CheckoutProps } from "../../src/actions";
+import { CheckoutV4, type CheckoutV4Props } from "../../src/actions";
 
 describe("Checkout", () => {
   let job: Job;
-  let checkout: Checkout;
+  let checkout: CheckoutV4;
 
   beforeEach(() => {
     // Mock the Job class and its methods
@@ -12,7 +12,7 @@ describe("Checkout", () => {
     } as unknown as Job; // Type assertion to match the Job interface
 
     // Create a new instance of the Checkout class before each test
-    const props: CheckoutProps = {
+    const props: CheckoutV4Props = {
       version: "v4",
       repository: "actions/checkout",
       ref: "main",
@@ -32,7 +32,7 @@ describe("Checkout", () => {
       setSafeDirectory: true,
       githubServerUrl: "https://github.com",
     };
-    checkout = new Checkout("checkout-step", props);
+    checkout = new CheckoutV4("checkout-step", props);
   });
 
   test("should initialize with provided properties", () => {

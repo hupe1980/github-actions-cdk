@@ -1,9 +1,9 @@
 import type { Job } from "../../src";
-import { SetupNode, type SetupNodeProps } from "../../src/actions";
+import { SetupNodeV4, type SetupNodeV4Props } from "../../src/actions";
 
 describe("SetupNode", () => {
   let job: Job;
-  let setupNode: SetupNode;
+  let setupNode: SetupNodeV4;
 
   beforeEach(() => {
     // Mock the Job class and its methods
@@ -12,7 +12,7 @@ describe("SetupNode", () => {
     } as unknown as Job; // Type assertion to match the Job interface
 
     // Create a new instance of the SetupNode class before each test
-    const props: SetupNodeProps = {
+    const props: SetupNodeV4Props = {
       version: "v4",
       nodeVersion: "14.x",
       alwaysAuth: true,
@@ -25,7 +25,7 @@ describe("SetupNode", () => {
       cache: "npm",
       cacheDependencyPath: "package-lock.json",
     };
-    setupNode = new SetupNode("setup-node-step", props);
+    setupNode = new SetupNodeV4("setup-node-step", props);
   });
 
   test("should initialize with provided properties", () => {
@@ -70,12 +70,12 @@ describe("SetupNode", () => {
   });
 
   test("should correctly handle optional properties", () => {
-    const props: SetupNodeProps = {
+    const props: SetupNodeV4Props = {
       version: "v4",
       nodeVersion: "14.x",
       // all other properties are omitted to test defaults
     };
-    const setupNodeOptional = new SetupNode("setup-node-step", props);
+    const setupNodeOptional = new SetupNodeV4("setup-node-step", props);
 
     expect(setupNodeOptional.alwaysAuth).toBeUndefined();
     expect(setupNodeOptional.nodeVersionFile).toBeUndefined();
