@@ -81,7 +81,7 @@ export class Workflow extends Component {
    * @param x - The object to check.
    * @returns `true` if `x` is a `workflow`; otherwise, `false`.
    */
-  public static isWorkflow(x: unknown): x is Job {
+  public static isWorkflow(x: unknown): x is Workflow {
     return x !== null && typeof x === "object" && WORKFLOW_SYMBOL in x;
   }
 
