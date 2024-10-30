@@ -9,6 +9,9 @@ import { type IWorkflowSynthesizer, WorkflowSynthesizer } from "./synthesizer";
 import type { WorkflowTriggers } from "./trigger";
 import { WorkflowValidator } from "./validator";
 
+// Unique symbol used to mark an object as a Workflow
+const WORKFLOW_SYMBOL = Symbol.for("github-actions-cdk.Workflow");
+
 /** Workflow configuration properties. */
 export interface WorkflowProps {
   /**
@@ -74,6 +77,15 @@ export interface WorkflowProps {
  */
 export class Workflow extends Component {
   /**
+   * Checks if an object is an instance of `Workflow`.
+   * @param x - The object to check.
+   * @returns `true` if `x` is a `workflow`; otherwise, `false`.
+   */
+  public static isWorkflow(x: unknown): x is Job {
+    return x !== null && typeof x === "object" && WORKFLOW_SYMBOL in x;
+  }
+
+  /**
    * The name of the workflow as displayed in GitHub Actions.
    */
   public readonly name?: string;
@@ -130,6 +142,8 @@ export class Workflow extends Component {
    */
   constructor(scope: IConstruct, id: string, props: WorkflowProps = {}) {
     super(scope, id);
+
+    Object.defineProperty(this, WORKFLOW_SYMBOL, { value: true });
 
     this.synthesizer = props.synthesizer ?? new WorkflowSynthesizer(this);
     this.name = props.name;
