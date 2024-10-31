@@ -5,5 +5,12 @@
   "formatter": {
     "indentStyle": "space", // default is `tab`
     "lineWidth": 100 // default is `80`
+  },
+  "linter": {
+    "rules": {
+      "complexity": {
+        "noStaticOnlyClass": "off"
+      }
+    }
   }
 }

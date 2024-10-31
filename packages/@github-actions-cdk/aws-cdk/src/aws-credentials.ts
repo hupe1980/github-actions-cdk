@@ -1,6 +1,6 @@
 import type { IRole } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import { PermissionLevel, type RegularStep, actions } from "github-actions-cdk";
+import { Expression, PermissionLevel, type RegularStep, actions } from "github-actions-cdk";
 
 export abstract class AwsCredentialsProvider extends Construct {
   public abstract permissionLevel(): PermissionLevel;
@@ -45,11 +45,11 @@ class GitHubSecretsProvider extends AwsCredentialsProvider {
       new actions.ConfigureAwsCredentialsV4(this, "id", {
         name: "Authenticate Via GitHub Secrets",
         awsRegion: region,
-        awsAccessKeyId: `\${{ secrets.${this.accessKeyId} }}`,
-        awsSecretAccessKey: `\${{ secrets.${this.secretAccessKey} }}`,
+        awsAccessKeyId: Expression.fromSecrets(this.accessKeyId),
+        awsSecretAccessKey: Expression.fromSecrets(this.secretAccessKey),
         ...(this.sessionToken
           ? {
-              sessionToken: `\${{ secrets.${this.sessionToken} }}`,
+              sessionToken: Expression.fromSecrets(this.sessionToken),
             }
           : undefined),
         ...(assumeRoleArn
@@ -117,9 +117,9 @@ class OpenIdConnectProvider extends AwsCredentialsProvider {
         new actions.ConfigureAwsCredentialsV4(this, "assume-role", {
           name: "Assume CDK Deploy Role",
           awsRegion: region,
-          awsAccessKeyId: "${{ env.AWS_ACCESS_KEY_ID }}",
-          awsSecretAccessKey: "${{ env.AWS_SECRET_ACCESS_KEY }}",
-          awsSessionToken: "${{ env.AWS_SESSION_TOKEN }}",
+          awsAccessKeyId: Expression.fromEnv("AWS_ACCESS_KEY_ID"),
+          awsSecretAccessKey: Expression.fromEnv("AWS_SECRET_ACCESS_KEY"),
+          awsSessionToken: Expression.fromEnv("AWS_SESSION_TOKEN"),
           roleToAssume: getDeployRole(assumeRoleArn),
           roleExternalId: "Pipeline",
         }),

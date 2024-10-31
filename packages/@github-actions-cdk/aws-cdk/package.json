@@ -36,7 +36,6 @@
     "build": "jsii",
     "clean": "rimraf dist lib",
     "package": "jsii-pacmak",
-    "prepare": "npm run build",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "test": "jest --passWithNoTests",

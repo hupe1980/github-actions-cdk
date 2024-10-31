@@ -37,7 +37,7 @@ export class GitHubActionsPipeline extends Construct {
 
     const publishJob = new PublishJob(workflow, "publish", {
       cdkOutdir: app.outdir,
-      awsCredentials: props.awsCredentials
+      awsCredentials: props.awsCredentials,
     });
 
     publishJob.addDependency(synthJob);

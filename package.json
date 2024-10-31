@@ -13,13 +13,13 @@
         "build": "npm run build --workspaces --if-present",
         "clean": "npm run clean --workspaces --if-present",
         "package": "npm run package --workspaces --if-present",
-        "prepare": "npm run prepare --workspaces --if-present",
+        "prepare": "npm run build --workspaces --if-present",
         "lint": "npm run lint --workspaces --if-present",
         "lint:fix": "npm run lint:fix --workspaces --if-present",
         "test": "npm run test --workspaces --if-present",
-        "example:typescript:flat": "npm run build --workspace=examples-typescript-flat",
-        "example:typescript:nested": "npm run build --workspace=examples-typescript-nested",
-        "example:typescript:aws-cdk": "npm run build --workspace=examples-typescript-aws-cdk"
+        "example:typescript:flat": "npm run synth --workspace=examples-typescript-flat",
+        "example:typescript:nested": "npm run synth --workspace=examples-typescript-nested",
+        "example:typescript:aws-cdk": "npm run synth --workspace=examples-typescript-aws-cdk"
     },
     "devDependencies": {
         "@biomejs/biome": "1.9.4",

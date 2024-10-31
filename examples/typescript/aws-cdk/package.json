@@ -2,7 +2,7 @@
     "name": "examples-typescript-aws-cdk",
     "private": true,
     "scripts": {
-        "build": "cdk synth"
+        "synth": "cdk synth"
     },
     "devDependencies": {
         "aws-cdk": "2.164.1",

@@ -3,8 +3,6 @@ import { Job, PermissionLevel, RunStep, actions } from "github-actions-cdk";
 import type { AwsCredentialsProvider } from "./aws-credentials";
 import { CDKOUT_ARTIFACT } from "./common";
 
-
-
 export interface Synth {
   readonly commands: string[];
   readonly installCommands?: string[];

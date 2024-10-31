@@ -7,6 +7,7 @@ export * from "./component";
 export * from "./concurrency";
 export * from "./cron";
 export * from "./defaults";
+export * from "./expression";
 export * from "./job";
 export * from "./manifest";
 export * from "./permissions";
