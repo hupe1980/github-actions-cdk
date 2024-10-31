@@ -1,0 +1,18 @@
+{
+    "name": "examples-typescript-aws-cdk",
+    "private": true,
+    "scripts": {
+        "build": "cdk synth"
+    },
+    "devDependencies": {
+        "aws-cdk": "2.164.1",
+        "ts-node": "^10.9.2",
+        "typescript": "~5.6.2"
+    },
+    "dependencies": {
+        "aws-cdk-lib": "2.164.1",
+        "constructs": "^10.0.0",
+        "@github-actions-cdk/aws-cdk": "file:../../packages/@github-actions-cdk/aws-cdk",
+        "github-actions-cdk": "file:../../packages/github-actions-cdk"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "name": "examples-typescript-flat",
+    "private": true,
+    "scripts": {
+        "build": "tsx workflowsrc.ts"
+    },
+    "dependencies": {
+        "github-actions-cdk": "file:../../packages/github-actions-cdk"
+    }
+}

@@ -1,6 +1,5 @@
 import type { IConstruct } from "constructs";
 import { Action, type CommonActionProps } from "../action";
-import { RegularStep } from "../step";
 
 /**
  * Output structure for the Checkout action.
@@ -162,7 +161,7 @@ export interface CheckoutV4Props extends CommonActionProps {
   readonly githubServerUrl?: string;
 
   /**
-   * Specifies the version of the Checkout action to use.
+   * Specifies the version of the action to use.
    */
   readonly version?: string;
 }
@@ -204,11 +203,33 @@ export class CheckoutV4 extends Action {
    * @param id - Unique identifier for the action.
    * @param props - Configuration properties for checkout action behavior.
    */
-  constructor(scope: IConstruct, id: string, props: CheckoutV4Props) {
+  constructor(scope: IConstruct, id: string, props: CheckoutV4Props = {}) {
     super(scope, id, {
+      name: props.name,
       actionIdentifier: "actions/checkout",
       version: "v4",
-      ...props,
+      parameters: {
+        repository: props.repository,
+        ref: props.ref,
+        token: props.token,
+        "ssh-key": props.sshKey,
+        "ssh-known-hosts": props.sshKnownHosts,
+        "ssh-strict": props.sshStrict,
+        "ssh-user": props.sshUser,
+        "persist-credentials": props.persistCredentials,
+        path: props.path,
+        clean: props.clean,
+        filter: props.filter,
+        "sparse-checkout": props.sparseCheckout?.join("\n"),
+        "sparse-checkout-cone-mode": props.sparseCheckoutConeMode,
+        "fetch-depth": props.fetchDepth,
+        "fetch-tags": props.fetchTags,
+        "show-progress": props.showProgress,
+        lfs: props.lfs,
+        submodules: props.submodules,
+        "set-safe-directory": props.setSafeDirectory,
+        "github-server-url": props.githubServerUrl,
+      },
     });
 
     this.repository = props.repository;
@@ -231,40 +252,6 @@ export class CheckoutV4 extends Action {
     this.submodules = props.submodules;
     this.setSafeDirectory = props.setSafeDirectory;
     this.githubServerUrl = props.githubServerUrl;
-  }
-
-  /**
-   * Creates a `RegularStep` representing the action's step in the workflow.
-   *
-   * @returns A `RegularStep` object with configured parameters for the checkout action.
-   */
-  protected createRegularStep(): RegularStep {
-    return new RegularStep(this, this.id, {
-      name: this.name,
-      uses: this.uses,
-      parameters: {
-        repository: this.repository,
-        ref: this.ref,
-        token: this.token,
-        "ssh-key": this.sshKey,
-        "ssh-known-hosts": this.sshKnownHosts,
-        "ssh-strict": this.sshStrict,
-        "ssh-user": this.sshUser,
-        "persist-credentials": this.persistCredentials,
-        path: this.path,
-        clean: this.clean,
-        filter: this.filter,
-        "sparse-checkout": this.sparseCheckout?.join("\n"),
-        "sparse-checkout-cone-mode": this.sparseCheckoutConeMode,
-        "fetch-depth": this.fetchDepth,
-        "fetch-tags": this.fetchTags,
-        "show-progress": this.showProgress,
-        lfs: this.lfs,
-        submodules: this.submodules,
-        "set-safe-directory": this.setSafeDirectory,
-        "github-server-url": this.githubServerUrl,
-      },
-    });
   }
 
   /**

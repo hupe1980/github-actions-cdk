@@ -1,6 +1,5 @@
 import type { IConstruct } from "constructs";
 import { Action, type CommonActionProps } from "../action";
-import { RegularStep } from "../step";
 
 /**
  * Output structure for the Setup Go action.
@@ -69,6 +68,11 @@ export interface SetupGoV5Props extends CommonActionProps {
    * Supported values include "amd64", "arm64", etc.
    */
   readonly architecture?: string;
+
+  /**
+   * Specifies the version of the action to use.
+   */
+  readonly version?: string;
 }
 
 /**
@@ -94,9 +98,18 @@ export class SetupGoV5 extends Action {
    */
   constructor(scope: IConstruct, id: string, props: SetupGoV5Props) {
     super(scope, id, {
+      name: props.name,
       actionIdentifier: "actions/setup-go",
       version: "v5",
-      ...props,
+      parameters: {
+        "go-version": props.goVersion,
+        "go-version-file": props.goVersionFile,
+        "check-latest": props.checkLatest,
+        token: props.token,
+        cache: props.cache,
+        "cache-dependency-path": props.cacheDependencyPath,
+        architecture: props.architecture,
+      },
     });
 
     this.goVersion = props.goVersion;
@@ -106,30 +119,6 @@ export class SetupGoV5 extends Action {
     this.cache = props.cache ?? true;
     this.cacheDependencyPath = props.cacheDependencyPath;
     this.architecture = props.architecture;
-  }
-
-  /**
-   * Creates a regular step for the Setup Go action.
-   *
-   * This method sets up the parameters for the action and prepares it to be
-   * executed in the workflow.
-   *
-   * @returns The configured RegularStep for the GitHub Actions job.
-   */
-  protected createRegularStep(): RegularStep {
-    return new RegularStep(this, this.id, {
-      name: this.name,
-      uses: this.uses,
-      parameters: {
-        "go-version": this.goVersion,
-        "go-version-file": this.goVersionFile,
-        "check-latest": this.checkLatest,
-        token: this.token,
-        cache: this.cache,
-        "cache-dependency-path": this.cacheDependencyPath,
-        architecture: this.architecture,
-      },
-    });
   }
 
   /**

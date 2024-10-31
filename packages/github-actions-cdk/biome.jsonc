@@ -1,6 +1,6 @@
 {
   "files": {
-    "ignore": ["coverage", "lib", "tsconfig.json", ".mypy_cache", ".venv"]
+    "ignore": ["coverage", "lib"]
   },
   "formatter": {
     "indentStyle": "space", // default is `tab`

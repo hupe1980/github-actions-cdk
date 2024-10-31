@@ -126,13 +126,7 @@ export abstract class StepBase extends Component {
     this.continueOnError = props.continueOnError;
     this.timeoutMinutes = props.timeoutMinutes;
 
-    this.node.addValidation({
-      validate: () => {
-        const validator = new StepBaseValidator(this);
-        validator.validate();
-        return validator.errors;
-      },
-    });
+    this.node.addValidation(new StepBaseValidator(this));
   }
 
   /**
@@ -180,13 +174,7 @@ export class RunStep extends StepBase {
     this.shell = props.shell;
 
     // Validation for the shell type
-    this.node.addValidation({
-      validate: () => {
-        const validator = new RunStepValidator(this);
-        validator.validate();
-        return validator.errors;
-      },
-    });
+    this.node.addValidation(new RunStepValidator(this));
   }
 
   /**
@@ -246,13 +234,7 @@ export class RegularStep extends StepBase {
     this.uses = props.uses;
     this.parameters = props.parameters;
 
-    this.node.addValidation({
-      validate: () => {
-        const validator = new RegularStepValidator(this);
-        validator.validate();
-        return validator.errors;
-      },
-    });
+    this.node.addValidation(new RegularStepValidator(this));
   }
 
   /**

@@ -1,6 +1,5 @@
 import type { IConstruct } from "constructs";
 import { Action, type CommonActionProps } from "../action";
-import { RegularStep } from "../step";
 
 /**
  * Outputs from the Setup Node.js action.
@@ -79,6 +78,11 @@ export interface SetupNodeV4Props extends CommonActionProps {
    * This allows caching of multiple dependencies efficiently.
    */
   readonly cacheDependencyPath?: string;
+
+  /**
+   * Specifies the version of the action to use.
+   */
+  readonly version?: string;
 }
 
 /**
@@ -107,9 +111,21 @@ export class SetupNodeV4 extends Action {
    */
   constructor(scope: IConstruct, id: string, props: SetupNodeV4Props) {
     super(scope, id, {
+      name: props.name,
       actionIdentifier: "actions/setup-node",
       version: "v4",
-      ...props,
+      parameters: {
+        "always-auth": props.alwaysAuth,
+        "node-version": props.nodeVersion,
+        "node-version-file": props.nodeVersionFile,
+        architecture: props.architecture,
+        "check-latest": props.checkLatest,
+        "registry-url": props.registryUrl,
+        scope: props.npmPackageScope,
+        token: props.token,
+        cache: props.cache,
+        "cache-dependency-path": props.cacheDependencyPath,
+      },
     });
 
     this.alwaysAuth = props.alwaysAuth;
@@ -122,33 +138,6 @@ export class SetupNodeV4 extends Action {
     this.token = props.token;
     this.cache = props.cache;
     this.cacheDependencyPath = props.cacheDependencyPath;
-  }
-
-  /**
-   * Creates a regular step for the Setup Node.js action.
-   *
-   * This method sets up the parameters for the action and prepares it to be
-   * executed in the workflow.
-   *
-   * @returns The configured RegularStep for the GitHub Actions job.
-   */
-  protected createRegularStep(): RegularStep {
-    return new RegularStep(this, this.id, {
-      name: this.name,
-      uses: this.uses,
-      parameters: {
-        "always-auth": this.alwaysAuth,
-        "node-version": this.nodeVersion,
-        "node-version-file": this.nodeVersionFile,
-        architecture: this.architecture,
-        "check-latest": this.checkLatest,
-        "registry-url": this.registryUrl,
-        scope: this.npmPackageScope,
-        token: this.token,
-        cache: this.cache,
-        "cache-dependency-path": this.cacheDependencyPath,
-      },
-    });
   }
 
   /**

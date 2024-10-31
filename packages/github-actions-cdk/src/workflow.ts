@@ -163,13 +163,7 @@ export class Workflow extends Component {
       };
     }
 
-    this.node.addValidation({
-      validate: () => {
-        const validator = new WorkflowValidator(this);
-        validator.validate();
-        return validator.errors;
-      },
-    });
+    this.node.addValidation(new WorkflowValidator(this));
   }
 
   /**

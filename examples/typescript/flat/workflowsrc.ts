@@ -1,5 +1,4 @@
-import { PermissionLevel, Project } from "../../../src";
-import { CheckoutV4, SetupNodeV4 } from "../../../src/actions";
+import { PermissionLevel, Project, actions } from "github-actions-cdk";
 
 const project = new Project({
   //additionalChecks: true,
@@ -23,11 +22,11 @@ const job = workflow.addJob("build", {
   },
 });
 
-new CheckoutV4(job, "checkout", {
+new actions.CheckoutV4(job, "checkout", {
   name: "Checkout Code",
 });
 
-const setupNode = new SetupNodeV4(job, "setup-node", {
+const setupNode = new actions.SetupNodeV4(job, "setup-node", {
   name: "Set up Node.js",
   nodeVersion: "20.x",
 });

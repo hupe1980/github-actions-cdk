@@ -1,6 +1,5 @@
 import type { IConstruct } from "constructs";
 import { Action, type CommonActionProps } from "../action"; // Adjust path as needed
-import { RegularStep } from "../step";
 
 /**
  * Outputs from the Setup Python action.
@@ -83,6 +82,11 @@ export interface SetupPythonV5Props extends CommonActionProps {
    * @default false
    */
   readonly allowPrereleases?: boolean;
+
+  /**
+   * Specifies the version of the action to use.
+   */
+  readonly version?: string;
 }
 
 /**
@@ -110,9 +114,20 @@ export class SetupPythonV5 extends Action {
    */
   constructor(scope: IConstruct, id: string, props: SetupPythonV5Props) {
     super(scope, id, {
+      name: props.name,
       actionIdentifier: "actions/setup-python",
       version: "v5",
-      ...props,
+      parameters: {
+        "python-version": props.pythonVersion,
+        "python-version-file": props.pythonVersionFile,
+        cache: props.cache,
+        architecture: props.architecture,
+        "check-latest": props.checkLatest,
+        token: props.token,
+        "cache-dependency-path": props.cacheDependencyPath,
+        "update-environment": props.updateEnvironment,
+        "allow-prereleases": props.allowPrereleases,
+      },
     });
 
     this.pythonVersion = props.pythonVersion;
@@ -124,29 +139,6 @@ export class SetupPythonV5 extends Action {
     this.cacheDependencyPath = props.cacheDependencyPath;
     this.updateEnvironment = props.updateEnvironment ?? true;
     this.allowPrereleases = props.allowPrereleases ?? false;
-  }
-
-  /**
-   * Creates a regular step in the specified job for the Setup Python action.
-   *
-   * @returns A configured `RegularStep` instance for executing the Setup Python action.
-   */
-  protected createRegularStep(): RegularStep {
-    return new RegularStep(this, this.id, {
-      name: this.name,
-      uses: this.uses,
-      parameters: {
-        "python-version": this.pythonVersion,
-        "python-version-file": this.pythonVersionFile,
-        cache: this.cache,
-        architecture: this.architecture,
-        "check-latest": this.checkLatest,
-        token: this.token,
-        "cache-dependency-path": this.cacheDependencyPath,
-        "update-environment": this.updateEnvironment,
-        "allow-prereleases": this.allowPrereleases,
-      },
-    });
   }
 
   /**

@@ -2,6 +2,7 @@ import type { IConstruct } from "constructs";
 import { Component } from "./component";
 import type { Defaults } from "./defaults";
 import type { Permissions } from "./permissions";
+import { snakeCaseKeys } from "./private/utils";
 import { RegularStep, type RegularStepProps, RunStep, type RunStepProps, StepBase } from "./step";
 import { JobValidator } from "./validator";
 
@@ -227,13 +228,7 @@ export class Job extends Component {
     this._needs = new Set(props.needs ?? []);
     this._outputs = props.outputs;
 
-    this.node.addValidation({
-      validate: () => {
-        const validator = new JobValidator(this);
-        validator.validate();
-        return validator.errors;
-      },
-    });
+    this.node.addValidation(new JobValidator(this));
   }
 
   /** Retrieves the unique identifier for the job. */
@@ -315,9 +310,9 @@ export class Job extends Component {
     const steps = this.node.findAll().filter((n) => n instanceof StepBase) as StepBase[];
 
     return {
-      [this.id]: {
+      [this.id]: snakeCaseKeys({
         name: this.name,
-        "runs-on": this.runsOn,
+        runsOn: this.runsOn,
         env: this.env,
         defaults: this.defaults,
         needs: this._needs.size > 0 ? this.needs : undefined,
@@ -325,13 +320,13 @@ export class Job extends Component {
         environment: this.environment,
         outputs: this._outputs,
         steps: steps.map((step) => step._synth()),
-        "timeout-minutes": this.timeoutMinutes,
+        timeoutMinutes: this.timeoutMinutes,
         strategy: this.strategy,
         container: this.container,
         services: this.services,
-        "runner-labels": this.runnerLabels,
-        "required-checks": this.requiredChecks,
-      },
+        runnerLabels: this.runnerLabels,
+        requiredChecks: this.requiredChecks,
+      }),
     };
   }
 }

@@ -1,16 +1,15 @@
 import type { IConstruct } from "constructs";
-import { Job, type JobProps, PermissionLevel, Project } from "../../../src";
-import { CheckoutV4, SetupNodeV4 } from "../../../src/actions";
+import { Job, type JobProps, PermissionLevel, Project, actions } from "github-actions-cdk";
 
 class CustomJob extends Job {
   constructor(scope: IConstruct, id: string, props: JobProps = {}) {
     super(scope, id, props);
 
-    new CheckoutV4(this, "checkout", {
+    new actions.CheckoutV4(this, "checkout", {
       name: "Checkout Code",
     });
 
-    new SetupNodeV4(this, "setup-node", {
+    new actions.SetupNodeV4(this, "setup-node", {
       name: "Set up Node.js",
       nodeVersion: "20.x",
     });
@@ -18,7 +17,7 @@ class CustomJob extends Job {
 }
 
 const project = new Project({
-  //additionalChecks: true,
+  // additionalChecks: true,
   outdir: `${__dirname}/.github/workflows`,
 });
 

@@ -1,6 +1,5 @@
 import type { IConstruct } from "constructs";
 import { Action, type CommonActionProps } from "../action";
-import { RegularStep } from "../step";
 
 /**
  * List of valid AWS regions for credential configuration.
@@ -105,6 +104,8 @@ export interface ConfigureAwsCredentialsV4Props extends CommonActionProps {
    */
   readonly roleDurationSeconds?: string;
 
+  readonly roleExternalId?: string;
+
   /**
    * Name for the assumed role session.
    */
@@ -114,6 +115,11 @@ export interface ConfigureAwsCredentialsV4Props extends CommonActionProps {
    * If true, outputs the credentials for use in later steps.
    */
   readonly outputCredentials?: boolean;
+
+  /**
+   * Specifies the version of the action to use.
+   */
+  readonly version?: string;
 }
 
 /**
@@ -142,9 +148,20 @@ export class ConfigureAwsCredentialsV4 extends Action {
    */
   constructor(scope: IConstruct, id: string, props: ConfigureAwsCredentialsV4Props) {
     super(scope, id, {
+      name: props.name,
       actionIdentifier: "aws-actions/configure-aws-credentials",
       version: "v4",
-      ...props,
+      parameters: {
+        "aws-region": props.awsRegion,
+        "role-to-assume": props.roleToAssume,
+        "aws-access-key-id": props.awsAccessKeyId,
+        "aws-secret-access-key": props.awsSecretAccessKey,
+        "aws-session-token": props.awsSessionToken,
+        "web-identity-token-file": props.webIdentityTokenFile,
+        "role-duration-seconds": props.roleDurationSeconds,
+        "role-session-name": props.roleSessionName,
+        "output-credentials": props.outputCredentials,
+      },
     });
 
     // Validate AWS region
@@ -161,29 +178,6 @@ export class ConfigureAwsCredentialsV4 extends Action {
     this.roleDurationSeconds = props.roleDurationSeconds;
     this.roleSessionName = props.roleSessionName;
     this.outputCredentials = props.outputCredentials;
-  }
-
-  /**
-   * Creates a regular step to configure AWS credentials within a job.
-   *
-   * @returns A RegularStep configured for AWS credentials.
-   */
-  protected createRegularStep(): RegularStep {
-    return new RegularStep(this, this.id, {
-      name: this.name,
-      uses: this.uses,
-      parameters: {
-        "aws-region": this.awsRegion,
-        "role-to-assume": this.roleToAssume,
-        "aws-access-key-id": this.awsAccessKeyId,
-        "aws-secret-access-key": this.awsSecretAccessKey,
-        "aws-session-token": this.awsSessionToken,
-        "web-identity-token-file": this.webIdentityTokenFile,
-        "role-duration-seconds": this.roleDurationSeconds,
-        "role-session-name": this.roleSessionName,
-        "output-credentials": this.outputCredentials,
-      },
-    });
   }
 
   /**
