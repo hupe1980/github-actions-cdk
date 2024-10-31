@@ -1,14 +1,12 @@
 {
     "name": "root",
     "private": true,
-    "workspaces": {
-        "packages": [
-            "examples/*",
-            "examples/typescript/*",
-            "packages/*",
-            "packages/@github-actions-cdk/*"
-        ]
-    },
+    "workspaces": [
+        "examples/*",
+        "examples/typescript/*",
+        "packages/*",
+        "packages/@github-actions-cdk/*"
+    ],
     "scripts": {
         "build": "npm run build --workspaces --if-present",
         "clean": "npm run clean --workspaces --if-present",
@@ -19,7 +17,8 @@
         "test": "npm run test --workspaces --if-present",
         "example:typescript:flat": "npm run synth --workspace=examples-typescript-flat",
         "example:typescript:nested": "npm run synth --workspace=examples-typescript-nested",
-        "example:typescript:aws-cdk": "npm run synth --workspace=examples-typescript-aws-cdk"
+        "example:typescript:aws-cdk": "npm run synth --workspace=examples-typescript-aws-cdk",
+        "example:typescript:cdktf": "npm run synth --workspace=examples-typescript-cdktf"
     },
     "devDependencies": {
         "@biomejs/biome": "1.9.4",

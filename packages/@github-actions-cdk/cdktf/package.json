@@ -1,0 +1,93 @@
+{
+  "name": "@github-actions-cdk/cdktf",
+  "version": "0.0.19",
+  "description": "A TypeScript library for creating and managing GitHub Actions workflows using Constructs, enabling type-safe and modular CI/CD automation.",
+  "keywords": [
+    "github",
+    "actions",
+    "cdk",
+    "typescript",
+    "python",
+    "workflow",
+    "ci",
+    "cd",
+    "automation",
+    "constructs",
+    "github-actions"
+  ],
+  "author": {
+    "name": "hupe1980",
+    "organization": false
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hupe1980/github-actions-cdk.git"
+  },
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "typesVersions": {
+    "<=3.9": {
+      "lib/*": ["lib/.types-compat/ts3.9/*", "lib/.types-compat/ts3.9/*/index.d.ts"]
+    }
+  },
+  "files": ["lib", ".jsii", "!*.tsbuildinfo"],
+  "scripts": {
+    "build": "jsii",
+    "clean": "rimraf dist lib",
+    "package": "jsii-pacmak",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "test": "jest --passWithNoTests",
+    "publish:npm": "./scripts/publish-npm.sh",
+    "publish:pypi": "./scripts/publish-pypi.sh"
+  },
+  "peerDependencies": {
+    "cdktf": "^0.20.9",
+    "constructs": "^10.4.2",
+    "github-actions-cdk": "^0.0.19"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "cdktf": "0.20.9",
+    "constructs": "10.4.2",
+    "github-actions-cdk": "0.0.19"
+  },
+  "stability": "experimental",
+  "jsii": {
+    "tsconfig": "tsconfig.json",
+    "validateTsconfig": "strict",
+    "diagnostics": {
+      "JSII5018": "message"
+    },
+    "outdir": "dist",
+    "tsc": {
+      "outDir": "./lib",
+      "rootDir": "./src"
+    },
+    "targets": {
+      "python": {
+        "module": "github_actions_cdk.cdktf",
+        "distName": "github-actions-cdk.cdktf"
+      }
+    }
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests"],
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.dev.json"
+        }
+      ]
+    },
+    "moduleFileExtensions": ["ts", "js", "json", "node"],
+    "testMatch": ["**/__tests__/**/*.ts?(x)", "**/?(*.)+(spec|test).ts?(x)"],
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageProvider": "v8"
+  }
+}
