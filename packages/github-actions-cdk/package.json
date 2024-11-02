@@ -1,6 +1,6 @@
 {
   "name": "github-actions-cdk",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "A TypeScript library for creating and managing GitHub Actions workflows using Constructs, enabling type-safe and modular CI/CD automation.",
   "keywords": [
     "github",
@@ -35,12 +35,10 @@
   "scripts": {
     "build": "jsii",
     "clean": "rimraf dist lib",
-    "package": "jsii-pacmak",
+    "package": "jsii-pacmak -o ../../dist",
     "lint": "biome check",
     "lint:fix": "biome check --write",
-    "test": "jest",
-    "publish:npm": "./scripts/publish-npm.sh",
-    "publish:pypi": "./scripts/publish-pypi.sh"
+    "test": "jest"
   },
   "bundleDependencies": ["yaml"],
   "peerDependencies": {

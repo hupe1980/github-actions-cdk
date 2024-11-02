@@ -168,7 +168,6 @@ export class PublishPipelineJob extends PipelineJob {
       }),
     );
 
-    // Capture the asset ID for later reference
     fileContents.push(`echo '${ASSET_HASH_NAME}=${assetId}' >> $GITHUB_OUTPUT`);
 
     const publishStepFile = posixPath(

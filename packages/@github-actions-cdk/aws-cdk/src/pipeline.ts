@@ -182,6 +182,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
     });
 
     const stacks = stageDeployment.stacks;
+    this.addStackProps(stacks, "environment", options?.gitHubEnvironment);
     this.addStackProps(stacks, "capabilities", options?.stackCapabilities);
 
     return stageDeployment;
