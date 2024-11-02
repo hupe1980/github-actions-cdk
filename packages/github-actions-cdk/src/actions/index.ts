@@ -1,3 +1,4 @@
+export * from "./aws-cloudformation-github-deploy";
 export * from "./checkout";
 export * from "./configure-aws-credentials";
 export * from "./download-artifact";

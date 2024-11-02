@@ -136,6 +136,21 @@ export abstract class StepBase extends Component {
   public get id(): string {
     return this.node.id;
   }
+
+  /**
+   * Generates the GitHub Actions output expression for this step.
+   *
+   * This method constructs a formatted string that represents the GitHub Actions
+   * output expression for the specified output name. The returned string can be
+   * used in workflows to reference outputs from this step in a reusable format.
+   *
+   * @param name - The name of the specific output to reference from this step.
+   * @returns The full GitHub Actions expression for accessing this output, e.g.,
+   *          "${{ steps.stepId.outputs.outputName }}".
+   */
+  public outputExpression(name: string): string {
+    return `\${{ steps.${this.id}.outputs.${name} }}`;
+  }
 }
 
 /**

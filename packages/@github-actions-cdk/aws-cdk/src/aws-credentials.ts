@@ -1,48 +1,98 @@
-import type { IRole } from "aws-cdk-lib/aws-iam";
-import { Construct } from "constructs";
-import { Expression, PermissionLevel, type RegularStep, actions } from "github-actions-cdk";
+import { Token } from "aws-cdk-lib";
+import {
+  Expression,
+  type Job,
+  PermissionLevel,
+  type RegularStep,
+  actions,
+} from "github-actions-cdk";
 
-export abstract class AwsCredentialsProvider extends Construct {
+/**
+ * Abstract class representing a provider for AWS credentials.
+ *
+ * Implementations of this class are responsible for defining how
+ * AWS credentials are obtained and how they are configured within
+ * GitHub Actions jobs.
+ */
+export abstract class AwsCredentialsProvider {
+  /**
+   * Retrieves the permission level required by this credentials provider.
+   */
   public abstract permissionLevel(): PermissionLevel;
-  public abstract credentialSteps(region: string, assumeRoleArn?: string): RegularStep[];
+
+  /**
+   * Generates a series of steps to configure AWS credentials for a GitHub Actions job.
+   *
+   * @param job - The GitHub Actions job in which to configure the credentials.
+   * @param region - The AWS region in which the credentials will be used.
+   * @param assumeRoleArn - An optional ARN for a role to assume with elevated permissions.
+   * @returns An array of `RegularStep` instances to be executed in the job.
+   */
+  public abstract credentialSteps(job: Job, region: string, assumeRoleArn?: string): RegularStep[];
 }
 
+/**
+ * Properties for configuring the GitHub Secrets provider.
+ */
 export interface GitHubSecretsProviderProps {
   /**
+   * The name of the GitHub secret that holds the AWS access key ID.
    * @default "AWS_ACCESS_KEY_ID"
    */
   readonly accessKeyId: string;
 
   /**
+   * The name of the GitHub secret that holds the AWS secret access key.
    * @default "AWS_SECRET_ACCESS_KEY"
    */
   readonly secretAccessKey: string;
 
   /**
+   * The name of the GitHub secret that holds the AWS session token.
    * @default - no session token is used
    */
   readonly sessionToken?: string;
 }
 
+/**
+ * AWS credentials provider that retrieves credentials from GitHub Secrets.
+ */
 class GitHubSecretsProvider extends AwsCredentialsProvider {
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
   private readonly sessionToken?: string;
 
-  constructor(scope: Construct, id: string, props?: GitHubSecretsProviderProps) {
-    super(scope, id);
+  /**
+   * Constructs a new instance of `GitHubSecretsProvider`.
+   *
+   * @param props - Optional properties for configuring the GitHub Secrets provider.
+   */
+  constructor(props?: GitHubSecretsProviderProps) {
+    super();
     this.accessKeyId = props?.accessKeyId ?? "AWS_ACCESS_KEY_ID";
     this.secretAccessKey = props?.secretAccessKey ?? "AWS_SECRET_ACCESS_KEY";
     this.sessionToken = props?.sessionToken;
   }
 
+  /**
+   * Returns the permission level required by this provider.
+   * In this case, no special permissions are required.
+   */
   public permissionLevel(): PermissionLevel {
     return PermissionLevel.NONE;
   }
 
-  public credentialSteps(region: string, assumeRoleArn?: string): RegularStep[] {
+  /**
+   * Configures AWS credentials for a GitHub Actions job using GitHub Secrets.
+   *
+   * @param job - The job in which to configure the credentials.
+   * @param region - The AWS region where the credentials are applicable.
+   * @param assumeRoleArn - An optional ARN for a role to assume.
+   * @returns An array of steps to authenticate with AWS using the provided secrets.
+   */
+  public credentialSteps(job: Job, region: string, assumeRoleArn?: string): RegularStep[] {
     return [
-      new actions.ConfigureAwsCredentialsV4(this, "id", {
+      new actions.ConfigureAwsCredentialsV4(job, "id", {
         name: "Authenticate Via GitHub Secrets",
         awsRegion: region,
         awsAccessKeyId: Expression.fromSecrets(this.accessKeyId),
@@ -63,58 +113,81 @@ class GitHubSecretsProvider extends AwsCredentialsProvider {
   }
 }
 
+/**
+ * Properties for configuring the OpenID Connect provider.
+ */
 export interface OpenIdConnectProviderProps {
   /**
-   * A role that utilizes the GitHub OIDC Identity Provider in your AWS account.
-   *
-   * You can create your own role in the console with the necessary trust policy
-   * to allow gitHub actions from your gitHub repository to assume the role, or
-   * you can utilize the `GitHubActionRole` construct to create a role for you.
+   * The ARN of the role that GitHub Actions will assume via OpenID Connect.
    */
-  readonly gitHubActionsRole: IRole;
+  readonly gitHubActionsRoleArn: string;
 
   /**
-   * The role session name to use when assuming the role.
-   *
+   * Optional role session name to use when assuming the role.
    * @default - no role session name
    */
   readonly roleSessionName?: string;
 }
 
+/**
+ * AWS credentials provider that uses OpenID Connect for authentication.
+ */
 class OpenIdConnectProvider extends AwsCredentialsProvider {
-  private readonly gitHubActionsRole: IRole;
-  private readonly roleSessionName: string | undefined;
+  private readonly gitHubActionsRoleArn: string;
+  private readonly roleSessionName?: string;
 
-  constructor(scope: Construct, id: string, props: OpenIdConnectProviderProps) {
-    super(scope, id);
+  /**
+   * Constructs a new instance of `OpenIdConnectProvider`.
+   *
+   * @param props - Properties for configuring the OpenID Connect provider.
+   * @throws Error if `gitHubActionsRoleArn` is unresolved.
+   */
+  constructor(props: OpenIdConnectProviderProps) {
+    super();
 
-    this.gitHubActionsRole = props.gitHubActionsRole;
+    if (Token.isUnresolved(props.gitHubActionsRoleArn)) {
+      throw new Error(
+        `The provided gitHubActionsRoleArn (${props.gitHubActionsRoleArn}) is unresolved. Please provide a concrete value.`,
+      );
+    }
+
+    this.gitHubActionsRoleArn = props.gitHubActionsRoleArn;
     this.roleSessionName = props.roleSessionName;
   }
 
+  /**
+   * Returns the permission level required by this provider.
+   * This provider requires write permissions.
+   */
   public permissionLevel(): PermissionLevel {
     return PermissionLevel.WRITE;
   }
 
-  public credentialSteps(region: string, assumeRoleArn?: string): RegularStep[] {
+  /**
+   * Configures AWS credentials for a GitHub Actions job using OpenID Connect.
+   *
+   * @param job - The job in which to configure the credentials.
+   * @param region - The AWS region where the credentials are applicable.
+   * @param assumeRoleArn - An optional ARN for a role to assume with elevated permissions.
+   * @returns An array of steps to authenticate with AWS using OpenID Connect.
+   */
+  public credentialSteps(job: Job, region: string, assumeRoleArn?: string): RegularStep[] {
     const steps: RegularStep[] = [];
 
     steps.push(
-      new actions.ConfigureAwsCredentialsV4(this, "authenticate", {
+      new actions.ConfigureAwsCredentialsV4(job, "authenticate", {
         name: "Authenticate Via OIDC",
         awsRegion: region,
-        roleToAssume: this.gitHubActionsRole.roleArn,
+        roleToAssume: this.gitHubActionsRoleArn,
         roleSessionName: this.roleSessionName,
       }),
     );
 
     if (assumeRoleArn) {
-      function getDeployRole(arn: string) {
-        return arn.replace("cfn-exec", "deploy");
-      }
+      const getDeployRole = (arn: string) => arn.replace("cfn-exec", "deploy");
 
       steps.push(
-        new actions.ConfigureAwsCredentialsV4(this, "assume-role", {
+        new actions.ConfigureAwsCredentialsV4(job, "assume-role", {
           name: "Assume CDK Deploy Role",
           awsRegion: region,
           awsAccessKeyId: Expression.fromEnv("AWS_ACCESS_KEY_ID"),
@@ -130,18 +203,43 @@ class OpenIdConnectProvider extends AwsCredentialsProvider {
   }
 }
 
+/**
+ * Helper class for generating ARNs for GitHub Actions roles.
+ */
+export class GitHubActionsRoleArn {
+  /**
+   * Creates an ARN for a GitHub Actions role based on the account ID.
+   *
+   * @param accountId - The AWS account ID.
+   * @param roleName - The name of the IAM role (defaults to "GitHubActionsRole").
+   * @returns The full ARN of the specified role.
+   */
+  public static fromAccount(accountId: string, roleName = "GitHubActionsRole"): string {
+    return `arn:aws:iam::${accountId}:role/${roleName}`;
+  }
+}
+
+/**
+ * Factory class for creating instances of AWS credentials providers.
+ */
 export class AwsCredentials {
-  static fromGitHubSecrets(
-    scope: Construct,
-    props?: GitHubSecretsProviderProps,
-  ): AwsCredentialsProvider {
-    return new GitHubSecretsProvider(scope, "GitHubSecretsProvider", props);
+  /**
+   * Creates an AWS credentials provider that uses GitHub secrets.
+   *
+   * @param props - Optional properties for configuring the GitHub Secrets provider.
+   * @returns An instance of `GitHubSecretsProvider`.
+   */
+  static fromGitHubSecrets(props?: GitHubSecretsProviderProps): AwsCredentialsProvider {
+    return new GitHubSecretsProvider(props);
   }
 
-  static fromOpenIdConnect(
-    scope: Construct,
-    props: OpenIdConnectProviderProps,
-  ): AwsCredentialsProvider {
-    return new OpenIdConnectProvider(scope, "OpenIdConnectProvider", props);
+  /**
+   * Creates an AWS credentials provider that uses OpenID Connect.
+   *
+   * @param props - Properties for configuring the OpenID Connect provider.
+   * @returns An instance of `OpenIdConnectProvider`.
+   */
+  static fromOpenIdConnect(props: OpenIdConnectProviderProps): AwsCredentialsProvider {
+    return new OpenIdConnectProvider(props);
   }
 }

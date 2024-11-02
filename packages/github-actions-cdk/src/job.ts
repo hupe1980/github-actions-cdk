@@ -105,6 +105,27 @@ export interface ContainerOptions {
 }
 
 /**
+ * Github environment with name and url.
+ *
+ * @see https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idenvironment
+ */
+export interface Environment {
+  /**
+   * Name of the environment
+   *
+   * @see https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-using-environment-name-and-url
+   */
+  readonly name: string;
+
+  /**
+   * The url for the environment.
+   *
+   * @see https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-using-environment-name-and-url
+   */
+  readonly url?: string;
+}
+
+/**
  * Properties for configuring a GitHub Actions job.
  */
 export interface JobProps {
@@ -124,7 +145,7 @@ export interface JobProps {
   readonly permissions?: Permissions;
 
   /** GitHub environment target for this job. */
-  readonly environment?: unknown;
+  readonly environment?: Environment;
 
   /** Outputs produced by this job, accessible by downstream jobs. */
   readonly outputs?: Record<string, string>;
@@ -187,7 +208,7 @@ export class Job extends Component {
   public readonly env?: Record<string, string>;
   public readonly defaults?: Defaults;
   public readonly permissions?: Permissions;
-  public readonly environment?: unknown;
+  public readonly environment?: Environment;
   public readonly runsOn: string[] | string;
   public readonly timeoutMinutes?: number;
   public readonly strategy?: Strategy;
@@ -309,6 +330,21 @@ export class Job extends Component {
   public _toRecord(): Record<string, unknown> {
     const steps = this.node.findAll().filter((n) => n instanceof StepBase) as StepBase[];
 
+    const environment = () => {
+      if (!this.environment) {
+        return undefined;
+      }
+
+      if (!this.environment.url) {
+        return this.environment.name;
+      }
+
+      return {
+        name: this.environment.name,
+        url: this.environment.url,
+      };
+    };
+
     return {
       [this.id]: snakeCaseKeys({
         name: this.name,
@@ -317,7 +353,7 @@ export class Job extends Component {
         defaults: this.defaults,
         needs: this._needs.size > 0 ? this.needs : undefined,
         permissions: this.permissions,
-        environment: this.environment,
+        environment: environment(),
         outputs: this._outputs,
         steps: steps.map((step) => step._synth()),
         timeoutMinutes: this.timeoutMinutes,

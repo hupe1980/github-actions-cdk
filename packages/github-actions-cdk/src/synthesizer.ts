@@ -128,7 +128,7 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
 
     const filename = path.join(session.outdir, `${this.workflow.id}.yml`);
 
-    const yaml = new YamlFile(filename, this.workflow._synth());
+    const yaml = new YamlFile(filename, this.workflow._synth(), this.workflow.commentAtTop);
 
     yaml.writeFile();
   }

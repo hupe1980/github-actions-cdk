@@ -25,19 +25,22 @@ const GITHUB_OIDC_THUMBPRINTS = [
 const RAW_ENDPOINT = "token.actions.githubusercontent.com";
 const PROVIDER_URL = `https://${RAW_ENDPOINT}`;
 
+/**
+ * Properties for configuring the GitHub Actions OpenID Connect provider.
+ */
 export interface GitHubActionsOpenIdConnectProviderProps {
   /**
    * Optional thumbprints to verify GitHub's certificates.
    *
    * Ensure to update these when GitHub rotates their certificates.
    *
-   * @default - Use predefined, up-to-date thumbprints.
+   * @default - Uses predefined, up-to-date thumbprints.
    */
   readonly thumbprints?: string[];
 }
 
 /**
- * Creates or references an OpenID Connect (OIDC) provider for GitHub Actions.
+ * Represents an OpenID Connect (OIDC) provider for GitHub Actions.
  *
  * This provider allows GitHub Actions to assume roles in AWS by connecting through OpenID Connect.
  */
@@ -56,6 +59,13 @@ export class GitHubActionsOpenIdConnectProvider extends Construct {
     );
   }
 
+  /**
+   * Constructs a new instance of `GitHubActionsOpenIdConnectProvider`.
+   *
+   * @param scope - The construct scope to define the provider within.
+   * @param id - The unique identifier for this provider.
+   * @param props - Optional properties for the OpenID Connect provider.
+   */
   constructor(scope: Construct, id: string, props: GitHubActionsOpenIdConnectProviderProps = {}) {
     super(scope, id);
 
@@ -67,11 +77,14 @@ export class GitHubActionsOpenIdConnectProvider extends Construct {
   }
 }
 
+/**
+ * Properties for creating a GitHub Actions IAM role.
+ */
 export interface GitHubActionsRoleProps {
   /**
    * The name for the GitHub Actions IAM role.
    *
-   * @default - "GitHubActionRole"
+   * @default - "GitHubActionsRole"
    */
   readonly roleName?: string;
 
@@ -83,7 +96,7 @@ export interface GitHubActionsRoleProps {
   /**
    * A list of GitHub repositories that are permitted to assume this role.
    *
-   * Each repository is formatted as `owner/repo`.
+   * Each repository should be formatted as `owner/repo`.
    */
   readonly repos?: string[];
 
@@ -101,9 +114,16 @@ export interface GitHubActionsRoleProps {
  * The role includes policies allowing the assumption of bootstrap roles and access to ECR authorization.
  */
 export class GitHubActionsRole extends Role {
+  /**
+   * Constructs a new instance of `GitHubActionsRole`.
+   *
+   * @param scope - The construct scope to define the role within.
+   * @param id - The unique identifier for this role.
+   * @param props - The properties for configuring the GitHub Actions role.
+   */
   constructor(scope: Construct, id: string, props: GitHubActionsRoleProps) {
     super(scope, id, {
-      roleName: props.roleName ?? "GitHubActionRole",
+      roleName: props.roleName ?? "GitHubActionsRole",
       assumedBy: new FederatedPrincipal(
         props.provider.openIdConnectProviderArn,
         {
