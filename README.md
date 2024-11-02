@@ -1,127 +1,26 @@
-# 🚧 GitHub Actions CDK
+# 🚧 GitHub Actions CDK Monorepo
 
-**github-actions-cdk** is a TypeScript library that simplifies the creation and management of GitHub Actions workflows using Constructs. With this library, developers can define workflows in a structured and type-safe manner, making it easier to automate CI/CD pipelines on GitHub. It also includes Python bindings for developers who prefer working in Python.
+This monorepo provides a suite of TypeScript libraries designed to simplify the setup, management, and automation of GitHub Actions workflows specifically tailored for AWS CDK and CDKTF applications. Each package is crafted to enable developers to define CI/CD workflows for cloud infrastructure deployments in a modular, type-safe way—ideal for projects leveraging AWS CDK, CDKTF, or custom GitHub Actions.
 
-## Features
+With these libraries, users can define workflows, manage cross-account deployments, and integrate Terraform and AWS infrastructure management directly into GitHub workflows. This monorepo supports TypeScript and offers Python bindings for developers who prefer to work in Python.
 
-- **Type-Safe Workflows**: Leverage TypeScript's strong typing to define your GitHub Actions workflows and ensure correctness.
-- **Python Bindings**: Access the same powerful constructs and features in Python, allowing seamless integration for Python developers.
-- **Modular Design**: Easily create and manage jobs, triggers, and options for your workflows.
+## Key Benefits
 
-## Installation
+- **Modular & Extensible Design**: Each package is designed with modularity in mind, allowing developers to create reusable components and customize workflows according to project needs.
+- **Cross-Account and Multi-Region Support**: Easily manage and deploy infrastructure across AWS accounts and regions, ideal for complex setups involving multiple environments.
+- **Type-Safe and Structured**: Built with TypeScript and leveraging strong typing, these libraries ensure workflows are structured and validated, reducing runtime errors.
+- **Python Bindings**: Python bindings are available for general GitHub Actions workflows, enabling teams using Python to benefit from the same constructs and automation capabilities.
 
-To get started with `github-actions-cdk`, install the package using npm or yarn for TypeScript, or pip for Python:
+## Packages
 
-### TypeScript
-
-```bash
-npm install github-actions-cdk
-```
-
-or 
-
-```bash
-yarn add github-actions-cdk
-```
-
-### Python
-```bash
-pip install github-actions-cdk
-```
+The monorepo contains libraries tailored for different use cases, each of which has its own README with further details:
+- **@github-actions-cdk/aws-cdk**: Tailored for AWS CDK projects.
+- **@github-actions-cdk/cdktf**: Designed for projects using CDKTF (Cloud Development Kit for Terraform).
+- **github-actions-cdk**: A general-purpose library for creating GitHub Actions workflows with Constructs, available in both TypeScript and Python.
 
 ## Getting Started
 
-### Basic Usage (TypeScript)
-
-Here's a simple example of how to create a GitHub Actions workflow using `github-actions-cdk` in TypeScript::
-
-```typescript
-import { PermissionLevel, Project, actions } from 'github-actions-cdk';
-
-const project = new Project({
-  //additionalChecks: true,
-});
-
-const workflow = project.addWorkflow("build", {
-  name: "Build",
-  triggers: {
-    push: { branches: ["main"] },
-    workflowDispatch: {},
-  },
-  permissions: {
-    contents: PermissionLevel.READ,
-  },
-});
-
-const job = workflow.addJob("build", {
-  env: {
-    CI: "true",
-  },
-});
-
-new actions.CheckoutV4(job, "checkout", {
-  name: "Checkout Code",
-});
-
-const setupNode = new actions.SetupNodeV4(job, "setup-node", {
-  name: "Set up Node.js",
-  nodeVersion: "20.x",
-});
-
-job.addOutput("node-version", setupNode.outputs.nodeVersion);
-
-project.synth();
-```
-
-### Basic Usage (Python)
-
-Here's how to create a GitHub Actions workflow using `github-actions-cdk` in Python:
-
-```python
-from github_actions_cdk import Project, PermissionLevel
-from github_actions_cdk.actions import CheckoutV4, SetupNodeV4
-
-project = Project(
-    #additional_checks=True,
-)
-
-workflow = project.add_workflow(
-    id="build",
-    name="Build",
-    triggers={
-        "push": {
-            "branches": ["main"],
-        }
-    },
-    permissions={
-        "contents": PermissionLevel.READ,
-    }
-)
-
-job = workflow.add_job(
-    id="build",
-    env={
-        "CI": "true",
-    },
-)
-
-CheckoutV4(
-    scope=job,
-    id="checkout",
-    name="Checkout Code",
-)
-
-setup_node = SetupNodeV4(
-    scope=job, 
-    id="setup-node",    
-    name="Set up Node.js",
-    node_version="14.x",
-)
-
-job.add_output("node-version", setup_node.outputs.node_version)
-                               
-project.synth()
-```
+Refer to each package’s README for detailed installation instructions and usage examples. Additionally, the `examples/` directory contains sample workflows to help you quickly set up pipelines for various use cases, including multi-region deployments, automated testing, and infrastructure monitoring.
 
 ## Contributing
 
