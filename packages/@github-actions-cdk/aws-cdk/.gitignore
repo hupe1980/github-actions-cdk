@@ -133,6 +133,7 @@ dist
 .venv
 .jsii
 .mypy_cache/
-
+/lib
+/coverage
 /dist/
 TODO.md
