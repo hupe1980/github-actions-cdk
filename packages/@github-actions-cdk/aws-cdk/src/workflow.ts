@@ -18,61 +18,71 @@ import {
 } from "./jobs";
 import { StageJob, Synth } from "./steps";
 
+/**
+ * Properties for defining a Pipeline Workflow.
+ *
+ * @remarks
+ * This interface extends WorkflowProps and adds properties specific to AWS CDK Pipelines and job execution.
+ */
 export interface PipelineWorkflowProps extends WorkflowProps {
-  /** The pipeline being defined, including stages and jobs. */
+  /** The CDK pipeline, including its stages and job configuration. */
   readonly pipeline: PipelineBase;
 
-  /** Options for configuring individual stacks in the pipeline. */
+  /** Configuration options for individual stacks in the pipeline. */
   readonly stackOptions: Record<string, StackOptions>;
 
-  /** Optional phase to execute before build jobs. */
+  /** Optional job phase to run before the main build jobs. */
   readonly preBuild?: IJobPhase;
 
-  /** Optional phase to execute after build jobs. */
+  /** Optional job phase to run after the main build jobs. */
   readonly postBuild?: IJobPhase;
 
-  /** AWS credentials provider for authenticating with AWS services. */
+  /** Provider for AWS credentials required to interact with AWS services. */
   readonly awsCredentials: AwsCredentialsProvider;
 
-  /** Output directory for CloudFormation templates. */
+  /** Overrides for specific action versions in GitHub Actions. */
+  readonly versionOverrides?: Record<string, string>;
+
+  /** Directory where CDK generates CloudFormation templates. */
   readonly cdkoutDir: string;
 }
 
 /**
- * Represents a workflow that manages the pipeline jobs for synthesizing, publishing, and deploying resources.
+ * Represents a GitHub Actions workflow to manage CDK pipeline jobs for synthesizing, publishing, and deploying AWS resources.
  *
- * This class extends the Workflow class from the GitHub Actions CDK to provide
- * a structured way of orchestrating pipeline jobs based on the AWS CDK pipeline graph.
+ * @remarks
+ * Extends `Workflow` from `github-actions-cdk`, and provides structured job orchestration based on the AWS CDK pipeline graph.
  */
 export class PipelineWorkflow extends Workflow {
   public readonly awsCredentials: AwsCredentialsProvider;
+  public readonly versionOverrides?: Record<string, string>;
   public readonly cdkoutDir: string;
-
   private readonly stackOptions: Record<string, StackOptions>;
 
   /**
-   * Constructs a new instance of PipelineWorkflow.
+   * Initializes a new `PipelineWorkflow`.
    *
-   * @param scope - The scope in which this construct is defined.
-   * @param id - Unique identifier for this workflow.
-   * @param props - Properties for configuring the pipeline workflow.
+   * @param scope - The scope within which this construct is created.
+   * @param id - The unique identifier for this workflow.
+   * @param props - Configuration properties for the pipeline workflow.
    */
   constructor(scope: Construct, id: string, props: PipelineWorkflowProps) {
     super(scope, id, props);
 
     this.awsCredentials = props.awsCredentials;
+    this.versionOverrides = props.versionOverrides;
     this.cdkoutDir = props.cdkoutDir;
     this.stackOptions = props.stackOptions;
 
     const structure = new PipelineGraph(props.pipeline, {
       selfMutation: false,
       publishTemplate: true,
-      prepareStep: false, // The changeset is created and executed in a single job.
+      prepareStep: false,
     });
 
     for (const stageNode of flatten(structure.graph.sortedChildren())) {
       if (!isGraph(stageNode)) {
-        throw new Error(`Top-level children must be graphs, got '${stageNode}'`);
+        throw new Error(`Top-level children must be graphs, received: '${stageNode}'`);
       }
 
       const tranches = stageNode.sortedLeaves();
@@ -81,27 +91,23 @@ export class PipelineWorkflow extends Workflow {
         for (const node of tranche) {
           switch (node.data?.type) {
             case "step":
-              if (node.data?.isBuildStep) {
-                if (node.data?.step instanceof Synth) {
-                  this.jobForSynth(
-                    node.uniqueId,
-                    this.renderDependencies(node),
-                    node.data.step,
-                    props.preBuild,
-                    props.postBuild,
-                  );
-                } else {
-                  throw new Error("Only SynthStep is supported as a build step");
-                }
+              if (node.data?.isBuildStep && node.data?.step instanceof Synth) {
+                this.createSynthJob(
+                  node.uniqueId,
+                  this.getDependencies(node),
+                  node.data.step,
+                  props.preBuild,
+                  props.postBuild,
+                );
               } else if (node.data?.step instanceof StageJob) {
-                this.jobForStage(node.uniqueId, this.renderDependencies(node), node.data.step);
+                this.createStageJob(node.uniqueId, this.getDependencies(node), node.data.step);
               }
               break;
             case "publish-assets":
-              this.jobForPublish(node.uniqueId, this.renderDependencies(node), node.data.assets);
+              this.createPublishJob(node.uniqueId, this.getDependencies(node), node.data.assets);
               break;
             case "execute":
-              this.jobForDeploy(node.uniqueId, this.renderDependencies(node), node.data.stack);
+              this.createDeployJob(node.uniqueId, this.getDependencies(node), node.data.stack);
               break;
             default:
               throw new Error(`Unknown node type: ${node.data?.type}`);
@@ -112,15 +118,15 @@ export class PipelineWorkflow extends Workflow {
   }
 
   /**
-   * Creates a job for synthesizing the application.
+   * Creates a job for synthesizing the CDK application.
    *
    * @param id - Unique identifier for the synth job.
-   * @param needs - List of job IDs that this job depends on.
-   * @param synth - The Synth step configuration.
+   * @param needs - List of dependencies for this job.
+   * @param synth - Synth step configuration.
    * @param preBuild - Optional jobs to run before the synth job.
    * @param postBuild - Optional jobs to run after the synth job.
    */
-  protected jobForSynth(
+  protected createSynthJob(
     id: string,
     needs: string[],
     synth: Synth,
@@ -140,6 +146,7 @@ export class PipelineWorkflow extends Workflow {
       installCommands: synth.installCommands,
       commands: synth.commands,
       awsCredentials: this.awsCredentials,
+      versionOverrides: this.versionOverrides,
       cdkoutDir: this.cdkoutDir,
     });
   }
@@ -148,10 +155,10 @@ export class PipelineWorkflow extends Workflow {
    * Creates a job for publishing stack assets.
    *
    * @param id - Unique identifier for the publish job.
-   * @param needs - List of job IDs that this job depends on.
-   * @param assets - The stack assets to publish.
+   * @param needs - List of dependencies for this job.
+   * @param assets - List of assets to publish.
    */
-  protected jobForPublish(id: string, needs: string[], assets: StackAsset[]): void {
+  protected createPublishJob(id: string, needs: string[], assets: StackAsset[]): void {
     new PublishPipelineJob(this, id, {
       name: `Publish Assets ${id}`,
       needs,
@@ -161,84 +168,85 @@ export class PipelineWorkflow extends Workflow {
       },
       assets,
       awsCredentials: this.awsCredentials,
+      versionOverrides: this.versionOverrides,
       cdkoutDir: this.cdkoutDir,
     });
   }
 
   /**
-   * Creates a job for deploying a stack.
+   * Creates a job for deploying a stack to AWS.
    *
    * @param id - Unique identifier for the deploy job.
-   * @param needs - List of job IDs that this job depends on.
-   * @param stack - The stack deployment information.
+   * @param needs - List of dependencies for this job.
+   * @param stack - Stack deployment information.
    */
-  protected jobForDeploy(id: string, needs: string[], stack: StackDeployment): void {
-    const stackOptions = this.stackOptions[stack.stackArtifactId];
+  protected createDeployJob(id: string, needs: string[], stack: StackDeployment): void {
+    const options = this.stackOptions[stack.stackArtifactId];
 
     new DeployPipelineJob(this, id, {
       name: `Deploy ${stack.stackArtifactId}`,
       needs,
-      environment: stackOptions?.environment,
+      environment: options?.environment,
       permissions: {
         contents: PermissionLevel.READ,
         idToken: this.awsCredentials.permissionLevel(),
       },
       stack,
-      stackOptions,
+      stackOptions: options,
       awsCredentials: this.awsCredentials,
+      versionOverrides: this.versionOverrides,
       cdkoutDir: this.cdkoutDir,
     });
   }
 
   /**
-   * Creates a job for running a stage job.
+   * Creates a job for running a stage job in the pipeline.
    *
    * @param id - Unique identifier for the stage job.
-   * @param needs - List of job IDs that this job depends on.
-   * @param job - The stage job configuration.
+   * @param needs - List of dependencies for this job.
+   * @param job - Configuration of the stage job.
    */
-  protected jobForStage(id: string, needs: string[], job: StageJob): void {
+  protected createStageJob(id: string, needs: string[], job: StageJob): void {
     new StagePipelineJob(this, id, {
       name: job.id,
       needs,
       phase: job.props,
       awsCredentials: this.awsCredentials,
+      versionOverrides: this.versionOverrides,
       cdkoutDir: this.cdkoutDir,
       ...job.props,
     });
   }
 
   /**
-   * Renders the dependencies for a given node in the graph.
+   * Retrieves a list of dependencies for a given graph node.
    *
-   * @param node - The graph node whose dependencies need to be rendered.
-   * @returns An array of unique IDs representing the node's dependencies.
+   * @param node - The graph node to analyze for dependencies.
+   * @returns An array of unique IDs representing dependencies of the node.
    */
-  private renderDependencies(node: AGraphNode): string[] {
-    const deps = new Array<AGraphNode>();
+  private getDependencies(node: AGraphNode): string[] {
+    const deps = [];
 
-    for (const d of node.allDeps) {
-      if (d instanceof Graph) {
-        deps.push(...d.allLeaves().nodes);
+    for (const dep of node.allDeps) {
+      if (dep instanceof Graph) {
+        deps.push(...dep.allLeaves().nodes);
       } else {
-        deps.push(d);
+        deps.push(dep);
       }
     }
 
-    return deps.map((x) => x.uniqueId);
+    return deps.map((dependency) => dependency.uniqueId);
   }
 }
 
 /**
- * Flattens an iterable of arrays into a single iterable.
+ * Utility function to flatten an iterable of arrays into a single iterable.
  *
- * @param xs - The input iterable containing arrays to flatten.
- * @returns An iterable of the flattened elements.
+ * @param xs - The input iterable containing arrays.
+ * @returns A flattened iterable.
  */
 function* flatten<A>(xs: Iterable<A[]>): IterableIterator<A> {
   for (const x of xs) {
-    for (const y of x) {
-      yield y;
-    }
+    yield* x;
   }
 }

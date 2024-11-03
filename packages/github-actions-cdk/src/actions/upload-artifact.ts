@@ -96,6 +96,8 @@ export interface UploadArtifactV4Props extends CommonActionProps {
  * additional parameters for naming, paths, and artifact retention.
  */
 export class UploadArtifactV4 extends Action {
+  public static readonly IDENTIFIER = "actions/upload-artifact";
+
   public readonly artifactName?: string;
   public readonly path: string;
   public readonly ifNoFilesFound?: "warn" | "error" | "ignore";
@@ -114,7 +116,7 @@ export class UploadArtifactV4 extends Action {
   constructor(scope: IConstruct, id: string, props: UploadArtifactV4Props) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "actions/upload-artifact",
+      actionIdentifier: UploadArtifactV4.IDENTIFIER,
       version: "v4",
       parameters: {
         name: props.artifactName,

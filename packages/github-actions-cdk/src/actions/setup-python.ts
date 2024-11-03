@@ -95,6 +95,8 @@ export interface SetupPythonV5Props extends CommonActionProps {
  * This action supports version specification, dependency caching, environment updates, and more.
  */
 export class SetupPythonV5 extends Action {
+  public static readonly IDENTIFIER = "actions/setup-python";
+
   public readonly pythonVersion: string;
   public readonly pythonVersionFile?: string;
   public readonly cache?: "pip" | "pipenv" | "poetry";
@@ -115,7 +117,7 @@ export class SetupPythonV5 extends Action {
   constructor(scope: IConstruct, id: string, props: SetupPythonV5Props) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "actions/setup-python",
+      actionIdentifier: SetupPythonV5.IDENTIFIER,
       version: "v5",
       parameters: {
         "python-version": props.pythonVersion,

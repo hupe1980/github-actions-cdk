@@ -175,6 +175,8 @@ export interface CheckoutV4Props extends CommonActionProps {
  * clone behavior.
  */
 export class CheckoutV4 extends Action {
+  public static readonly IDENTIFIER = "actions/checkout";
+
   public readonly repository?: string;
   public readonly ref?: string;
   public readonly token?: string;
@@ -206,7 +208,7 @@ export class CheckoutV4 extends Action {
   constructor(scope: IConstruct, id: string, props: CheckoutV4Props = {}) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "actions/checkout",
+      actionIdentifier: CheckoutV4.IDENTIFIER,
       version: "v4",
       parameters: {
         repository: props.repository,

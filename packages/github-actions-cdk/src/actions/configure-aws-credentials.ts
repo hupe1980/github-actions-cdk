@@ -129,6 +129,8 @@ export interface ConfigureAwsCredentialsV4Props extends CommonActionProps {
  * workflow steps to interact with AWS services.
  */
 export class ConfigureAwsCredentialsV4 extends Action {
+  public static readonly IDENTIFIER = "aws-actions/configure-aws-credentials";
+
   public readonly awsRegion: string;
   public readonly roleToAssume?: string;
   public readonly awsAccessKeyId?: string;
@@ -149,7 +151,7 @@ export class ConfigureAwsCredentialsV4 extends Action {
   constructor(scope: IConstruct, id: string, props: ConfigureAwsCredentialsV4Props) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "aws-actions/configure-aws-credentials",
+      actionIdentifier: ConfigureAwsCredentialsV4.IDENTIFIER,
       version: "v4",
       parameters: {
         "aws-region": props.awsRegion,

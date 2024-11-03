@@ -43,13 +43,13 @@
   "peerDependencies": {
     "cdktf": "^0.20.9",
     "constructs": "^10.4.2",
-    "github-actions-cdk": "^0.0.19"
+    "github-actions-cdk": "^0.0.20"
   },
   "dependencies": {},
   "devDependencies": {
     "cdktf": "0.20.9",
     "constructs": "10.4.2",
-    "github-actions-cdk": "0.0.19"
+    "github-actions-cdk": "0.0.20"
   },
   "stability": "experimental",
   "jsii": {

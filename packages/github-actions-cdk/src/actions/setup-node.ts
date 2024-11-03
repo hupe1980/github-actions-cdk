@@ -91,6 +91,8 @@ export interface SetupNodeV4Props extends CommonActionProps {
  * This action configures Node.js version, caching, registry settings, and more to facilitate builds.
  */
 export class SetupNodeV4 extends Action {
+  public static readonly IDENTIFIER = "actions/setup-node";
+
   public readonly alwaysAuth?: boolean;
   public readonly nodeVersion: string;
   public readonly nodeVersionFile?: string;
@@ -112,7 +114,7 @@ export class SetupNodeV4 extends Action {
   constructor(scope: IConstruct, id: string, props: SetupNodeV4Props) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "actions/setup-node",
+      actionIdentifier: SetupNodeV4.IDENTIFIER,
       version: "v4",
       parameters: {
         "always-auth": props.alwaysAuth,

@@ -125,6 +125,8 @@ export interface AwsCloudFormationGitHubDeployV1Props extends CommonActionProps 
  * capabilities, parameters, rollback behavior, and notification settings.
  */
 export class AwsCloudFormationGitHubDeployV1 extends Action {
+  public static readonly IDENTIFIER = "aws-actions/aws-cloudformation-github-deploy";
+
   public readonly stackName: string;
   public readonly template: string;
   public readonly capabilities?: string;
@@ -152,7 +154,7 @@ export class AwsCloudFormationGitHubDeployV1 extends Action {
   constructor(scope: IConstruct, id: string, props: AwsCloudFormationGitHubDeployV1Props) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "aws-actions/aws-cloudformation-github-deploy",
+      actionIdentifier: AwsCloudFormationGitHubDeployV1.IDENTIFIER,
       version: props.version ?? "v1",
       parameters: {
         name: props.stackName,

@@ -81,6 +81,8 @@ export interface SetupGoV5Props extends CommonActionProps {
  * This action supports Go version setup, dependency caching, and architecture targeting.
  */
 export class SetupGoV5 extends Action {
+  public static readonly IDENTIFIER = "actions/setup-go";
+
   public readonly goVersion: string;
   public readonly goVersionFile?: string;
   public readonly checkLatest: boolean;
@@ -99,7 +101,7 @@ export class SetupGoV5 extends Action {
   constructor(scope: IConstruct, id: string, props: SetupGoV5Props) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "actions/setup-go",
+      actionIdentifier: SetupGoV5.IDENTIFIER,
       version: "v5",
       parameters: {
         "go-version": props.goVersion,

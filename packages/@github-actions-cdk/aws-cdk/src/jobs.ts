@@ -11,39 +11,80 @@ const ASSET_HASH_NAME = "asset-hash";
 const CDKOUT_ARTIFACT = "cdk.out";
 
 /**
- * Properties for configuring a pipeline job.
+ * Configuration properties for defining a job in the pipeline.
+ *
+ * @remarks
+ * `PipelineJobProps` allows for specifying the AWS credentials provider, any version overrides for actions,
+ * and the CDK output directory used within the pipeline job.
  */
 export interface PipelineJobProps extends JobProps {
   /**
-   * The provider for AWS credentials to be used within this job.
+   * Provider for AWS credentials to be used within this job.
+   *
+   * @remarks
+   * This enables the job to authenticate and interact with AWS resources.
    */
   readonly awsCredentials: AwsCredentialsProvider;
 
   /**
-   * The directory where the CDK output files are located.
+   * Optional version overrides for specific GitHub Actions.
+   *
+   * @remarks
+   * Provides a way to specify custom versions (or SHA values) for GitHub Actions, allowing for precise control
+   * over which versions are used in the workflow.
+   */
+  readonly versionOverrides?: Record<string, string>;
+
+  /**
+   * Directory path where CDK output files are located.
+   *
+   * @remarks
+   * Specifies the folder that contains synthesized output files from AWS CDK. This path is used by the pipeline
+   * job to locate and utilize CDK artifacts in subsequent workflow steps.
    */
   readonly cdkoutDir: string;
 }
 
 /**
- * Represents a job in the pipeline that requires AWS credentials and CDK output.
+ * Represents a job within the pipeline that requires AWS credentials and CDK output.
+ *
+ * @remarks
+ * The `PipelineJob` class extends the `Job` class and includes specific properties and methods for managing
+ * AWS authentication, CDK output references, and version control for GitHub Actions used in the pipeline.
  */
 export class PipelineJob extends Job {
+  /** AWS credentials provider associated with this job. */
   public readonly awsCredentials: AwsCredentialsProvider;
+
+  /** Specific version overrides for GitHub Actions, if any are provided. */
+  public readonly versionOverrides: Record<string, string>;
+
+  /** Directory containing the CDK output files for this job. */
   public readonly cdkoutDir: string;
 
   /**
    * Constructs a new instance of `PipelineJob`.
    *
-   * @param scope - The scope in which this job is defined.
-   * @param id - The unique identifier for this job.
-   * @param props - The properties for the pipeline job.
+   * @param scope - The scope in which to define this job construct.
+   * @param id - Unique identifier for this job within the workflow.
+   * @param props - Properties for configuring the pipeline job.
    */
   constructor(scope: Construct, id: string, props: PipelineJobProps) {
     super(scope, id, props);
 
     this.awsCredentials = props.awsCredentials;
+    this.versionOverrides = props.versionOverrides ?? {};
     this.cdkoutDir = props.cdkoutDir;
+  }
+
+  /**
+   * Looks up the version override for a given action identifier, if available.
+   *
+   * @param actionIdentifier - The identifier of the GitHub Action to retrieve the version for.
+   * @returns The overridden version (or SHA) for the action, if specified; otherwise, `undefined`.
+   */
+  public lookupVersion(actionIdentifier: string): string | undefined {
+    return this.versionOverrides[actionIdentifier] ?? undefined;
   }
 }
 
@@ -93,6 +134,7 @@ export class SynthPipelineJob extends PipelineJob {
 
     new actions.CheckoutV4(this, "checkout", {
       name: "Checkout",
+      version: this.lookupVersion(actions.CheckoutV4.IDENTIFIER),
     });
 
     if (props.preBuild) props.preBuild.steps(this);
@@ -116,6 +158,7 @@ export class SynthPipelineJob extends PipelineJob {
       artifactName: CDKOUT_ARTIFACT,
       path: props.cdkoutDir,
       includeHiddenFiles: true,
+      version: this.lookupVersion(actions.UploadArtifactV4.IDENTIFIER),
     });
   }
 }
@@ -146,6 +189,7 @@ export class PublishPipelineJob extends PipelineJob {
       name: `Download ${CDKOUT_ARTIFACT}`,
       artifactName: CDKOUT_ARTIFACT,
       path: props.cdkoutDir,
+      version: this.lookupVersion(actions.DownloadArtifactV4.IDENTIFIER),
     });
 
     const installSuffix = props.cdkCliVersion ? `@${props.cdkCliVersion}` : "";
@@ -239,6 +283,7 @@ export class DeployPipelineJob extends PipelineJob {
       noFailOnEmptyChangeset: "1",
       roleArn: props.stack.executionRoleArn,
       capabilities: props.stackOptions?.capabilities?.join(","),
+      version: this.lookupVersion(actions.AwsCloudFormationGitHubDeployV1.IDENTIFIER),
     });
   }
 }

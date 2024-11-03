@@ -80,6 +80,8 @@ export interface DownloadArtifactV4Props extends CommonActionProps {
  * the artifact name, download path, pattern matching, and GitHub API authentication.
  */
 export class DownloadArtifactV4 extends Action {
+  public static readonly IDENTIFIER = "actions/download-artifact";
+
   public readonly artifactName?: string;
   public readonly path?: string;
   public readonly pattern?: string;
@@ -98,7 +100,7 @@ export class DownloadArtifactV4 extends Action {
   constructor(scope: IConstruct, id: string, props: DownloadArtifactV4Props = {}) {
     super(scope, id, {
       name: props.name,
-      actionIdentifier: "actions/download-artifact",
+      actionIdentifier: DownloadArtifactV4.IDENTIFIER,
       version: props.version ?? "v4",
       parameters: {
         name: props.artifactName,
