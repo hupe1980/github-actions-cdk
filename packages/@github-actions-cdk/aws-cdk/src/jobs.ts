@@ -165,26 +165,73 @@ export class SynthPipelineJob extends PipelineJob {
 
 /**
  * Properties for a publish pipeline job.
+ *
+ * @remarks
+ * This interface defines the configuration options for a publish job in the pipeline,
+ * including the stack assets that need to be published, their corresponding hash mappings,
+ * and the optional version of the CDK CLI to use.
  */
 export interface PublishPipelineJobProps extends PipelineJobProps {
   /**
    * The stack assets to be published.
+   *
+   * @remarks
+   * This is an array of `StackAsset` objects that represent the resources
+   * in the AWS CDK application that need to be published to AWS. Each asset should
+   * be included to ensure they are correctly managed and deployed.
    */
   readonly assets: StackAsset[];
 
   /**
+   * A mapping of asset identifiers to their corresponding output expressions.
+   *
+   * @remarks
+   * This map is used to track the outputs of each asset publish step,
+   * where the keys are asset identifiers, and the values are the output
+   * expressions that reference the published asset hashes in the GitHub Actions
+   * workflow. This enables downstream jobs in the pipeline to access the published
+   * asset information as needed.
+   */
+  readonly assetHashMap: Record<string, string>;
+
+  /**
    * Optional version of the CDK CLI to use for publishing.
+   *
+   * @remarks
+   * If provided, this version will be used to run the publish commands.
+   * If omitted, the latest installed version of the CDK CLI will be used.
+   * Specifying a version can help prevent compatibility issues when deploying
+   * assets, especially in environments with multiple CDK versions.
    */
   readonly cdkCliVersion?: string;
 }
 
 /**
  * A job that publishes stack assets to AWS.
+ *
+ * @remarks
+ * The `PublishPipelineJob` class handles the process of publishing assets to AWS.
+ * It defines the steps required to download artifacts, install necessary dependencies,
+ * and execute the publish command for each asset. The job integrates with AWS
+ * credentials for secure authentication and provides hooks for outputting asset hashes.
  */
 export class PublishPipelineJob extends PipelineJob {
+  /**
+   * Constructs a new instance of `PublishPipelineJob`.
+   *
+   * @param scope - The parent construct scope.
+   * @param id - Unique identifier for this publish job.
+   * @param props - Configuration properties for the publish job.
+   *
+   * @remarks
+   * The constructor initializes the publish job by setting up the necessary steps
+   * to download artifacts, install dependencies, and publish assets. It iterates
+   * through each asset and creates the appropriate publish steps.
+   */
   constructor(scope: Construct, id: string, props: PublishPipelineJobProps) {
     super(scope, id, props);
 
+    // Download artifact step
     new actions.DownloadArtifactV4(this, "DownloadArtifact", {
       name: `Download ${CDKOUT_ARTIFACT}`,
       artifactName: CDKOUT_ARTIFACT,
@@ -192,41 +239,60 @@ export class PublishPipelineJob extends PipelineJob {
       version: this.lookupVersion(actions.DownloadArtifactV4.IDENTIFIER),
     });
 
+    // Install CDK assets
     const installSuffix = props.cdkCliVersion ? `@${props.cdkCliVersion}` : "";
-
     new RunStep(this, "install", {
       name: "Install",
       run: `npm install --no-save cdk-assets${installSuffix}`,
     });
 
-    props.awsCredentials.credentialSteps(this, "eu-central-1");
+    // AWS credentials configuration
+    props.awsCredentials.credentialSteps(this, "us-east-1");
 
-    const { assetId, assetManifestPath } = props.assets[0];
-
+    // Helper functions to manage file paths and asset names
     const relativeToAssembly = (p: string) =>
       posixPath(path.join(props.cdkoutDir, path.relative(path.resolve(props.cdkoutDir), p)));
 
-    const fileContents: string[] = ["set -ex"].concat(
-      props.assets.map((asset) => {
-        return `npx cdk-assets --path "${relativeToAssembly(asset.assetManifestPath)}" --verbose publish "${asset.assetSelector}"`;
-      }),
-    );
+    const assetName = (idx: number) => `${ASSET_HASH_NAME}-${idx + 1}`;
 
-    fileContents.push(`echo '${ASSET_HASH_NAME}=${assetId}' >> $GITHUB_OUTPUT`);
+    // Array to hold paths of publish step files
+    const publishStepFiles: string[] = [];
 
-    const publishStepFile = posixPath(
-      path.join(path.dirname(relativeToAssembly(assetManifestPath)), `publish-${id}-step.sh`),
-    );
+    // Loop through each asset and create publish step files
+    props.assets.forEach((asset, idx) => {
+      const { assetId, assetManifestPath, assetSelector } = asset;
 
-    fs.mkdirSync(path.dirname(publishStepFile), { recursive: true });
-    fs.writeFileSync(publishStepFile, fileContents.join("\n"), { encoding: "utf-8" });
+      const fileContents: string[] = [
+        "set -ex",
+        `npx cdk-assets --path "${relativeToAssembly(assetManifestPath)}" --verbose publish "${assetSelector}"`,
+      ];
 
-    const publishStep = new RunStep(this, "publish", {
-      name: `Publish ${id}`,
-      run: `/bin/bash ./cdk.out/${posixPath(path.relative(props.cdkoutDir, publishStepFile))}`,
+      fileContents.push(`echo '${ASSET_HASH_NAME}=${assetId}' >> $GITHUB_OUTPUT`);
+      props.assetHashMap[assetId] = `\${{ needs.${this.id}.outputs.${assetName(idx)} }}`;
+
+      // Define a unique publish step file path for each asset
+      const publishStepFile = posixPath(
+        path.join(
+          path.dirname(relativeToAssembly(assetManifestPath)),
+          `publish-${id}-step${idx + 1}.sh`,
+        ),
+      );
+
+      fs.mkdirSync(path.dirname(publishStepFile), { recursive: true });
+      fs.writeFileSync(publishStepFile, fileContents.join("\n"), { encoding: "utf-8" });
+
+      publishStepFiles.push(publishStepFile);
     });
 
-    this.addOutput(ASSET_HASH_NAME, publishStep.outputExpression(ASSET_HASH_NAME));
+    // Create a RunSteps for each publish step file
+    publishStepFiles.forEach((publishStepFile, idx) => {
+      const publishStep = new RunStep(this, `publish-${idx + 1}`, {
+        name: `Publish ${id}`,
+        run: `/bin/bash ./cdk.out/${posixPath(path.relative(props.cdkoutDir, publishStepFile))}`,
+      });
+
+      this.addOutput(assetName(idx), publishStep.outputExpression(ASSET_HASH_NAME));
+    });
   }
 }
 
@@ -247,26 +313,71 @@ export interface StackOptions {
 
 /**
  * Properties for a deployment pipeline job.
+ *
+ * @remarks
+ * This interface defines the configuration options required for a deployment job
+ * in the pipeline. It includes the CloudFormation stack to be deployed, a mapping
+ * of asset hashes for use in the stack template, and optional stack-specific options.
  */
 export interface DeployPipelineJobProps extends PipelineJobProps {
   /**
    * The stack to be deployed.
+   *
+   * @remarks
+   * This property represents the `StackDeployment` object which contains metadata
+   * about the CloudFormation stack. It must specify properties such as the stack name,
+   * region, and the URL of the CloudFormation template to be used for deployment.
    */
   readonly stack: StackDeployment;
 
   /**
+   * A mapping of asset identifiers to their corresponding output expressions.
+   *
+   * @remarks
+   * This map is used to replace asset hash placeholders in the CloudFormation template
+   * with the actual asset values at deployment time. The keys are asset identifiers,
+   * and the values are the output expressions derived from the publishing steps.
+   */
+  readonly assetHashMap: Record<string, string>;
+
+  /**
    * Optional stack-specific options.
+   *
+   * @remarks
+   * These options can include capabilities, tags, and other settings specific to
+   * the deployment of the stack. Providing these options allows for customization
+   * of the deployment process, such as enabling IAM capabilities or specifying tags.
    */
   readonly stackOptions?: StackOptions;
 }
 
 /**
  * A job that deploys a CloudFormation stack.
+ *
+ * @remarks
+ * The `DeployPipelineJob` class is responsible for executing the deployment of a
+ * specified CloudFormation stack. It integrates with AWS credentials for authentication
+ * and ensures that the stack is deployed with the correct template and asset replacements.
+ * The job will throw errors if required properties are not provided, ensuring
+ * robustness in the deployment process.
  */
 export class DeployPipelineJob extends PipelineJob {
+  /**
+   * Constructs a new instance of `DeployPipelineJob`.
+   *
+   * @param scope - The parent construct scope.
+   * @param id - Unique identifier for this deployment job.
+   * @param props - Configuration properties for the deployment job.
+   *
+   * @remarks
+   * The constructor validates required properties for the stack and sets up the
+   * necessary steps to deploy the CloudFormation stack using the provided asset hash
+   * mappings and options. It initializes the deployment action with AWS CloudFormation.
+   */
   constructor(scope: Construct, id: string, props: DeployPipelineJobProps) {
     super(scope, id, props);
 
+    // Validate required properties
     if (!props.stack.region) {
       throw new Error('"region" is required');
     }
@@ -275,11 +386,22 @@ export class DeployPipelineJob extends PipelineJob {
       throw new Error(`unable to determine template URL for stack ${props.stack.stackArtifactId}`);
     }
 
+    // Configure AWS credentials for deployment
     props.awsCredentials.credentialSteps(this, props.stack.region, props.stack.assumeRoleArn);
 
+    // Function to replace asset hash in the template
+    const replaceAssetHash = (template: string) => {
+      const hash = path.parse(template.split("/").pop() ?? "").name;
+      if (props.assetHashMap[hash] === undefined) {
+        throw new Error(`Template asset hash ${hash} not found.`);
+      }
+      return template.replace(hash, props.assetHashMap[hash]);
+    };
+
+    // Create the CloudFormation deployment action
     new actions.AwsCloudFormationGitHubDeployV1(this, "deploy", {
       stackName: props.stack.stackName,
-      template: props.stack.templateUrl,
+      template: replaceAssetHash(props.stack.templateUrl),
       noFailOnEmptyChangeset: "1",
       roleArn: props.stack.executionRoleArn,
       capabilities: props.stackOptions?.capabilities?.join(","),

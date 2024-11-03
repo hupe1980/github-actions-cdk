@@ -38,6 +38,16 @@ export interface GitHubActionsPipelineProps {
   readonly workflowFilename?: string;
 
   /**
+   * Whether to enable a single publisher for each asset type.
+   *
+   * @remarks
+   * When true, consolidates publishing jobs to reduce redundant asset publishing.
+   *
+   * @default false
+   */
+  readonly singlePublisherPerAssetType?: boolean;
+
+  /**
    * Environment variables to set in the workflow.
    */
   readonly workflowEnv?: Record<string, string>;
@@ -142,6 +152,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
   public readonly workflowOutdir: string;
   public readonly workflowFilename: string;
 
+  private readonly singlePublisherPerAssetType?: boolean;
   private readonly workflowEnv?: Record<string, string>;
   private readonly preBuild?: IJobPhase;
   private readonly postBuild?: IJobPhase;
@@ -163,6 +174,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
     this.workflowName = props.workflowName ?? "Deploy";
     this.workflowOutdir = props.workflowOutdir ?? ".github/workflows";
     this.workflowFilename = props.workflowFilename ?? "deploy";
+    this.singlePublisherPerAssetType = props.singlePublisherPerAssetType;
     this.workflowEnv = props.workflowEnv;
     this.preBuild = props.preBuild;
     this.postBuild = props.postBuild;
@@ -237,6 +249,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
 
     new PipelineWorkflow(this.adapter, this.workflowFilename, {
       name: this.workflowName,
+      singlePublisherPerAssetType: this.singlePublisherPerAssetType,
       commentAtTop: this.renderYamlComment(names),
       env: this.workflowEnv,
       pipeline: this,

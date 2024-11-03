@@ -48,7 +48,7 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      asset-hash: ${{ steps.publish.outputs.asset-hash }}
+      asset-hash-1: ${{ steps.publish-1.outputs.asset-hash }}
     steps:
       - id: DownloadArtifact
         name: Download cdk.out
@@ -63,11 +63,11 @@ jobs:
         name: Authenticate Via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: eu-central-1
+          aws-region: us-east-1
           role-to-assume: arn:aws:iam::<account-id>:role/GitHubActionsRole
-      - id: publish
+      - id: publish-1
         name: Publish Assets-FileAsset1
-        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset1-step.sh
+        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset1-step1.sh
   Assets-FileAsset2:
     name: Publish Assets Assets-FileAsset2
     runs-on: ubuntu-latest
@@ -77,7 +77,8 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      asset-hash: ${{ steps.publish.outputs.asset-hash }}
+      asset-hash-1: ${{ steps.publish-1.outputs.asset-hash }}
+      asset-hash-2: ${{ steps.publish-2.outputs.asset-hash }}
     steps:
       - id: DownloadArtifact
         name: Download cdk.out
@@ -92,11 +93,14 @@ jobs:
         name: Authenticate Via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: eu-central-1
+          aws-region: us-east-1
           role-to-assume: arn:aws:iam::<account-id>:role/GitHubActionsRole
-      - id: publish
+      - id: publish-1
         name: Publish Assets-FileAsset2
-        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset2-step.sh
+        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset2-step1.sh
+      - id: publish-2
+        name: Publish Assets-FileAsset2
+        run: /bin/bash ./cdk.out/assembly-EU/publish-Assets-FileAsset2-step2.sh
   Assets-FileAsset3:
     name: Publish Assets Assets-FileAsset3
     runs-on: ubuntu-latest
@@ -106,7 +110,7 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      asset-hash: ${{ steps.publish.outputs.asset-hash }}
+      asset-hash-1: ${{ steps.publish-1.outputs.asset-hash }}
     steps:
       - id: DownloadArtifact
         name: Download cdk.out
@@ -121,11 +125,11 @@ jobs:
         name: Authenticate Via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: eu-central-1
+          aws-region: us-east-1
           role-to-assume: arn:aws:iam::<account-id>:role/GitHubActionsRole
-      - id: publish
+      - id: publish-1
         name: Publish Assets-FileAsset3
-        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset3-step.sh
+        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset3-step1.sh
   Assets-FileAsset4:
     name: Publish Assets Assets-FileAsset4
     runs-on: ubuntu-latest
@@ -135,7 +139,8 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      asset-hash: ${{ steps.publish.outputs.asset-hash }}
+      asset-hash-1: ${{ steps.publish-1.outputs.asset-hash }}
+      asset-hash-2: ${{ steps.publish-2.outputs.asset-hash }}
     steps:
       - id: DownloadArtifact
         name: Download cdk.out
@@ -150,11 +155,14 @@ jobs:
         name: Authenticate Via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: eu-central-1
+          aws-region: us-east-1
           role-to-assume: arn:aws:iam::<account-id>:role/GitHubActionsRole
-      - id: publish
+      - id: publish-1
         name: Publish Assets-FileAsset4
-        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset4-step.sh
+        run: /bin/bash ./cdk.out/assembly-US/publish-Assets-FileAsset4-step1.sh
+      - id: publish-2
+        name: Publish Assets-FileAsset4
+        run: /bin/bash ./cdk.out/assembly-EU/publish-Assets-FileAsset4-step2.sh
   Assets-FileAsset5:
     name: Publish Assets Assets-FileAsset5
     runs-on: ubuntu-latest
@@ -164,7 +172,7 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      asset-hash: ${{ steps.publish.outputs.asset-hash }}
+      asset-hash-1: ${{ steps.publish-1.outputs.asset-hash }}
     steps:
       - id: DownloadArtifact
         name: Download cdk.out
@@ -179,11 +187,11 @@ jobs:
         name: Authenticate Via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: eu-central-1
+          aws-region: us-east-1
           role-to-assume: arn:aws:iam::<account-id>:role/GitHubActionsRole
-      - id: publish
+      - id: publish-1
         name: Publish Assets-FileAsset5
-        run: /bin/bash ./cdk.out/assembly-EU/publish-Assets-FileAsset5-step.sh
+        run: /bin/bash ./cdk.out/assembly-EU/publish-Assets-FileAsset5-step1.sh
   Assets-FileAsset6:
     name: Publish Assets Assets-FileAsset6
     runs-on: ubuntu-latest
@@ -193,7 +201,7 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      asset-hash: ${{ steps.publish.outputs.asset-hash }}
+      asset-hash-1: ${{ steps.publish-1.outputs.asset-hash }}
     steps:
       - id: DownloadArtifact
         name: Download cdk.out
@@ -208,11 +216,11 @@ jobs:
         name: Authenticate Via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: eu-central-1
+          aws-region: us-east-1
           role-to-assume: arn:aws:iam::<account-id>:role/GitHubActionsRole
-      - id: publish
+      - id: publish-1
         name: Publish Assets-FileAsset6
-        run: /bin/bash ./cdk.out/assembly-EU/publish-Assets-FileAsset6-step.sh
+        run: /bin/bash ./cdk.out/assembly-EU/publish-Assets-FileAsset6-step1.sh
   Prod-EU-BucketStack-Deploy:
     name: Deploy EUBucketStack0F6FDF2E
     runs-on: ubuntu-latest
@@ -243,7 +251,8 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: EU-BucketStack
-          template: https://cdk-hnb659fds-assets-123456789012-eu-west-2.s3.eu-west-2.amazonaws.com/5eab9f4fd7d1de08d1a7a3062d1bae10f9cc2562d22e7e5accac456edc9cced3.json
+          template: https://cdk-hnb659fds-assets-123456789012-eu-west-2.s3.eu-west-2.amazonaws.com/${{
+            needs.Assets-FileAsset5.outputs.asset-hash-1 }}.json
           no-fail-on-empty-changeset: "1"
           role-arn: arn:${AWS::Partition}:iam::123456789012:role/cdk-hnb659fds-cfn-exec-role-123456789012-eu-west-2
   Prod-US-hello-world:
@@ -285,7 +294,8 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: US-BucketStack
-          template: https://cdk-hnb659fds-assets-123456789012-us-east-1.s3.us-east-1.amazonaws.com/abf0f407a3b17a7880e4cc21719626b88487cb357a05304e3813bbbbea4ec82e.json
+          template: https://cdk-hnb659fds-assets-123456789012-us-east-1.s3.us-east-1.amazonaws.com/${{
+            needs.Assets-FileAsset1.outputs.asset-hash-1 }}.json
           no-fail-on-empty-changeset: "1"
           role-arn: arn:${AWS::Partition}:iam::123456789012:role/cdk-hnb659fds-cfn-exec-role-123456789012-us-east-1
   Prod-EU-FunctionStack-Deploy:
@@ -319,7 +329,8 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: EU-FunctionStack
-          template: https://cdk-hnb659fds-assets-123456789012-eu-west-2.s3.eu-west-2.amazonaws.com/be36681c7f9b8bc23e37f2f39a062f69503f8f0511e6a85b19f1e4ce2ab1efd5.json
+          template: https://cdk-hnb659fds-assets-123456789012-eu-west-2.s3.eu-west-2.amazonaws.com/${{
+            needs.Assets-FileAsset6.outputs.asset-hash-1 }}.json
           no-fail-on-empty-changeset: "1"
           role-arn: arn:${AWS::Partition}:iam::123456789012:role/cdk-hnb659fds-cfn-exec-role-123456789012-eu-west-2
   Prod-US-FunctionStack-Deploy:
@@ -354,6 +365,7 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: US-FunctionStack
-          template: https://cdk-hnb659fds-assets-123456789012-us-east-1.s3.us-east-1.amazonaws.com/e8865bf3ca2384a0b3a1576384fa70a431e2e03d160cdee08adbb8319c727c03.json
+          template: https://cdk-hnb659fds-assets-123456789012-us-east-1.s3.us-east-1.amazonaws.com/${{
+            needs.Assets-FileAsset3.outputs.asset-hash-1 }}.json
           no-fail-on-empty-changeset: "1"
           role-arn: arn:${AWS::Partition}:iam::123456789012:role/cdk-hnb659fds-cfn-exec-role-123456789012-us-east-1

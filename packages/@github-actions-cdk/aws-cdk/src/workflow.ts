@@ -25,8 +25,23 @@ import { StageJob, Synth } from "./steps";
  * This interface extends WorkflowProps and adds properties specific to AWS CDK Pipelines and job execution.
  */
 export interface PipelineWorkflowProps extends WorkflowProps {
-  /** The CDK pipeline, including its stages and job configuration. */
+  /**
+   * The CDK pipeline, including its stages and job configuration.
+   * Defines the sequence and structure of actions for synthesizing, publishing, and deploying.
+   */
   readonly pipeline: PipelineBase;
+
+  /**
+   * Whether to use a single publisher job for each type of asset.
+   *
+   * @remarks
+   * If `true`, each asset type (e.g., file assets, Docker images) will be published by a single job in the workflow,
+   * consolidating multiple asset publication steps into one job. This can reduce the total number of jobs needed,
+   * making the workflow more efficient when dealing with large numbers of assets.
+   *
+   * Defaults to `false`, meaning each asset is published in its own job.
+   */
+  readonly singlePublisherPerAssetType?: boolean;
 
   /** Configuration options for individual stacks in the pipeline. */
   readonly stackOptions: Record<string, StackOptions>;
@@ -58,6 +73,7 @@ export class PipelineWorkflow extends Workflow {
   public readonly versionOverrides?: Record<string, string>;
   public readonly cdkoutDir: string;
   private readonly stackOptions: Record<string, StackOptions>;
+  private readonly assetHashMap: Record<string, string> = {};
 
   /**
    * Initializes a new `PipelineWorkflow`.
@@ -78,6 +94,7 @@ export class PipelineWorkflow extends Workflow {
       selfMutation: false,
       publishTemplate: true,
       prepareStep: false,
+      singlePublisherPerAssetType: props.singlePublisherPerAssetType ?? false,
     });
 
     for (const stageNode of flatten(structure.graph.sortedChildren())) {
@@ -167,6 +184,7 @@ export class PipelineWorkflow extends Workflow {
         idToken: this.awsCredentials.permissionLevel(),
       },
       assets,
+      assetHashMap: this.assetHashMap,
       awsCredentials: this.awsCredentials,
       versionOverrides: this.versionOverrides,
       cdkoutDir: this.cdkoutDir,
@@ -192,6 +210,7 @@ export class PipelineWorkflow extends Workflow {
         idToken: this.awsCredentials.permissionLevel(),
       },
       stack,
+      assetHashMap: this.assetHashMap,
       stackOptions: options,
       awsCredentials: this.awsCredentials,
       versionOverrides: this.versionOverrides,
