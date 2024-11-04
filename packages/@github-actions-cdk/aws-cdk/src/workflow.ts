@@ -7,10 +7,12 @@ import {
 } from "aws-cdk-lib/pipelines/lib/helpers-internal";
 import type { Construct } from "constructs";
 import { PermissionLevel, Workflow, type WorkflowProps } from "github-actions-cdk";
-import type { AwsCredentialsProvider } from "./aws-credentials";
+import type { IAwsCredentialsProvider } from "./aws-credentials";
+import type { DockerCredentials } from "./docker-credentials";
 import {
   DeployPipelineJob,
   type IJobPhase,
+  type PipelineJobProps,
   PublishPipelineJob,
   type StackOptions,
   StagePipelineJob,
@@ -81,7 +83,16 @@ export interface PipelineWorkflowProps extends WorkflowProps {
   readonly phases?: PipelinePhases;
 
   /** Provider for AWS credentials required to interact with AWS services. */
-  readonly awsCredentials: AwsCredentialsProvider;
+  readonly awsCredentials: IAwsCredentialsProvider;
+
+  /**
+   * Docker credentials required for registry authentication within the workflow.
+   *
+   * @remarks
+   * Specify one or more `DockerCredentials` instances for authenticating against Docker
+   * registries (such as DockerHub, ECR, GHCR, or custom registries) used in the pipeline.
+   */
+  readonly dockerCredentials?: DockerCredentials[];
 
   /** Overrides for specific action versions in GitHub Actions. */
   readonly versionOverrides?: Record<string, string>;
@@ -97,9 +108,7 @@ export interface PipelineWorkflowProps extends WorkflowProps {
  * Extends `Workflow` from `github-actions-cdk`, and provides structured job orchestration based on the AWS CDK pipeline graph.
  */
 export class PipelineWorkflow extends Workflow {
-  public readonly awsCredentials: AwsCredentialsProvider;
-  public readonly versionOverrides?: Record<string, string>;
-  public readonly cdkoutDir: string;
+  private readonly pipelineJobProps: PipelineJobProps;
   private readonly stackOptions: Record<string, StackOptions>;
   private readonly assetHashMap: Record<string, string> = {};
 
@@ -113,9 +122,13 @@ export class PipelineWorkflow extends Workflow {
   constructor(scope: Construct, id: string, props: PipelineWorkflowProps) {
     super(scope, id, props);
 
-    this.awsCredentials = props.awsCredentials;
-    this.versionOverrides = props.versionOverrides;
-    this.cdkoutDir = props.cdkoutDir;
+    this.pipelineJobProps = {
+      awsCredentials: props.awsCredentials,
+      dockerCredentials: props.dockerCredentials,
+      versionOverrides: props.versionOverrides,
+      cdkoutDir: props.cdkoutDir,
+    };
+
     this.stackOptions = props.stackOptions;
 
     const structure = new PipelineGraph(props.pipeline, {
@@ -189,16 +202,14 @@ export class PipelineWorkflow extends Workflow {
       needs,
       permissions: {
         contents: PermissionLevel.READ,
-        idToken: this.awsCredentials.permissionLevel(),
+        idToken: this.pipelineJobProps.awsCredentials.permissionLevel(),
       },
       installCommands: synth.installCommands,
       commands: synth.commands,
       env: synth.env,
       preBuild,
       postBuild,
-      awsCredentials: this.awsCredentials,
-      versionOverrides: this.versionOverrides,
-      cdkoutDir: this.cdkoutDir,
+      ...this.pipelineJobProps,
     });
   }
 
@@ -221,15 +232,13 @@ export class PipelineWorkflow extends Workflow {
       needs,
       permissions: {
         contents: PermissionLevel.READ,
-        idToken: this.awsCredentials.permissionLevel(),
+        idToken: this.pipelineJobProps.awsCredentials.permissionLevel(),
       },
       assets,
       prePublish,
       postPublish,
       assetHashMap: this.assetHashMap,
-      awsCredentials: this.awsCredentials,
-      versionOverrides: this.versionOverrides,
-      cdkoutDir: this.cdkoutDir,
+      ...this.pipelineJobProps,
     });
   }
 
@@ -249,14 +258,12 @@ export class PipelineWorkflow extends Workflow {
       environment: options?.environment,
       permissions: {
         contents: PermissionLevel.READ,
-        idToken: this.awsCredentials.permissionLevel(),
+        idToken: this.pipelineJobProps.awsCredentials.permissionLevel(),
       },
       stack,
       assetHashMap: this.assetHashMap,
       stackOptions: options,
-      awsCredentials: this.awsCredentials,
-      versionOverrides: this.versionOverrides,
-      cdkoutDir: this.cdkoutDir,
+      ...this.pipelineJobProps,
     });
   }
 
@@ -272,10 +279,8 @@ export class PipelineWorkflow extends Workflow {
       name: job.id,
       needs,
       phase: job.props,
-      awsCredentials: this.awsCredentials,
-      versionOverrides: this.versionOverrides,
-      cdkoutDir: this.cdkoutDir,
       ...job.props,
+      ...this.pipelineJobProps,
     });
   }
 

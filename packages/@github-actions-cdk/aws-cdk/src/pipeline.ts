@@ -2,18 +2,22 @@ import { Stack, Stage } from "aws-cdk-lib";
 import { PipelineBase, type StackDeployment, type StageDeployment } from "aws-cdk-lib/pipelines";
 import { Construct } from "constructs";
 import { AwsCdkAdapter } from "./adapter";
-import type { AwsCredentialsProvider } from "./aws-credentials";
+import type { IAwsCredentialsProvider } from "./aws-credentials";
+import type { DockerCredentials } from "./docker-credentials";
 import type { IJobPhase, StackOptions } from "./jobs";
 import type { Synth } from "./steps";
 import { GitHubWave, type IWaveStageAdder, type StageOptions, type WaveOptions } from "./wave";
 import { type PipelinePhases, PipelineWorkflow } from "./workflow";
 
 /**
- * Properties for configuring the GitHub Actions pipeline.
+ * Properties for configuring a GitHub Actions-based deployment pipeline.
  *
  * @remarks
- * Provides options for defining the workflow environment, AWS credentials, job phases, and version overrides,
- * along with paths and naming conventions for GitHub Actions workflows.
+ * `GitHubActionsPipelineProps` enables configuration of the GitHub Actions workflow
+ * for a CDK pipeline, including defining the workflow environment, AWS credentials,
+ * Docker registry credentials, job phases, and version overrides for specific actions.
+ * It also provides options for setting workflow file paths, naming conventions, and
+ * a synthesizer for the CDK application.
  */
 export interface GitHubActionsPipelineProps extends PipelinePhases {
   /**
@@ -24,46 +28,73 @@ export interface GitHubActionsPipelineProps extends PipelinePhases {
   readonly workflowName?: string;
 
   /**
-   * Directory path for the workflow output files.
+   * Directory path where workflow YAML files will be generated.
    *
    * @default ".github/workflows"
    */
   readonly workflowOutdir?: string;
 
   /**
-   * Filename for the workflow file.
+   * Name of the generated workflow file (without extension).
    *
    * @default "deploy"
    */
   readonly workflowFilename?: string;
 
   /**
-   * Whether to enable a single publisher for each asset type.
+   * Enables a single publishing job per asset type within the workflow.
    *
    * @remarks
-   * When true, consolidates publishing jobs to reduce redundant asset publishing.
+   * When set to `true`, this option consolidates publishing jobs by asset type
+   * (e.g., Docker images, file assets), which can reduce redundant jobs and streamline
+   * the workflow, especially in pipelines with multiple assets of the same type.
    *
    * @default false
    */
   readonly singlePublisherPerAssetType?: boolean;
 
   /**
-   * Environment variables to set in the workflow.
+   * Environment variables to be included in the workflow.
+   *
+   * @remarks
+   * This allows setting custom environment variables for jobs within the workflow,
+   * which may be useful for configuration or runtime settings that the jobs rely on.
    */
   readonly workflowEnv?: Record<string, string>;
 
   /**
-   * AWS credentials provider for authenticating AWS actions.
+   * AWS credentials provider for actions requiring AWS authentication.
+   *
+   * @remarks
+   * This provider supplies AWS credentials (e.g., access keys) for actions that
+   * interact with AWS services. The provider should implement `IAwsCredentialsProvider`.
    */
-  readonly awsCredentials: AwsCredentialsProvider;
+  readonly awsCredentials: IAwsCredentialsProvider;
 
   /**
-   * Version overrides for GitHub Actions used in the workflow.
+   * Docker credentials required for registry authentication within the workflow.
+   *
+   * @remarks
+   * Specify one or more `DockerCredentials` instances for authenticating against Docker
+   * registries (such as DockerHub, ECR, GHCR, or custom registries) used in the pipeline.
+   */
+  readonly dockerCredentials?: DockerCredentials[];
+
+  /**
+   * Version overrides for specific GitHub Actions used in the workflow.
+   *
+   * @remarks
+   * Use this to specify particular versions of actions within the workflow (e.g.,
+   * actions/checkout@v2). This is useful for managing dependencies and ensuring compatibility.
    */
   readonly versionOverrides?: Record<string, string>;
 
   /**
-   * Synthesizer for CDK applications.
+   * Synthesizer for the CDK application.
+   *
+   * @remarks
+   * The synthesizer generates CloudFormation templates and other assets required
+   * for deployment. This is a critical part of the CDK application lifecycle.
    */
   readonly synth: Synth;
 }
@@ -148,8 +179,10 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
   private readonly postBuild?: IJobPhase;
   private readonly prePublish?: IJobPhase;
   private readonly postPublish?: IJobPhase;
-  private readonly awsCredentials: AwsCredentialsProvider;
+  private readonly dockerCredentials?: DockerCredentials[];
   private readonly versionOverrides?: Record<string, string>;
+
+  private readonly awsCredentials: IAwsCredentialsProvider;
   private readonly stackOptions: Record<string, StackOptions> = {};
   private readonly adapter: AwsCdkAdapter;
 
@@ -172,6 +205,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
     this.postBuild = props.postBuild;
     this.prePublish = props.prePublish;
     this.postPublish = props.postPublish;
+    this.dockerCredentials = props.dockerCredentials;
     this.awsCredentials = props.awsCredentials;
     this.versionOverrides = props.versionOverrides;
     this.adapter = new AwsCdkAdapter(this, { outdir: this.workflowOutdir });
@@ -256,6 +290,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
       },
       cdkoutDir: app.outdir,
       awsCredentials: this.awsCredentials,
+      dockerCredentials: this.dockerCredentials,
       versionOverrides: this.versionOverrides,
     });
   }

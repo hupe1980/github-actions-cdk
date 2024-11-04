@@ -1,4 +1,4 @@
-import { AwsCredentials, GitHubActionsOpenIdConnectProvider, GitHubActionsPipeline, GitHubActionsRole, StageJob, Synth } from '@github-actions-cdk/aws-cdk';
+import { AwsCredentials, DockerCredentials, GitHubActionsOpenIdConnectProvider, GitHubActionsPipeline, GitHubActionsRole, StageJob, Synth } from '@github-actions-cdk/aws-cdk';
 import { App, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
@@ -17,7 +17,7 @@ class GithubActionsStack extends Stack {
 
         const pipeline = new GitHubActionsPipeline(this, 'Pipeline', {
             workflowOutdir: `${__dirname}/.github/workflows`,
-            singlePublisherPerAssetType: true,
+            //singlePublisherPerAssetType: true,
             preBuild: { steps: (job) => {
                 new RunStep(job, 'pre', {
                     run: 'echo "Hello, world!"',
@@ -29,6 +29,7 @@ class GithubActionsStack extends Stack {
             awsCredentials: AwsCredentials.fromOpenIdConnect({
                 gitHubActionsRoleArn: "arn:aws:iam::<account-id>:role/GitHubActionsRole",
             }),
+            //dockerCredentials: [DockerCredentials.ghcr()],
         });
 
         // a wave deploys all stages concurrently

@@ -3,7 +3,8 @@ import * as path from "node:path";
 import type { StackAsset, StackDeployment } from "aws-cdk-lib/pipelines";
 import type { Construct } from "constructs";
 import { Job, type JobProps, RunStep, actions } from "github-actions-cdk";
-import type { AwsCredentialsProvider } from "./aws-credentials";
+import type { IAwsCredentialsProvider } from "./aws-credentials";
+import type { DockerCredentials } from "./docker-credentials";
 import { PublishAssetScriptGenerator } from "./private/assets";
 import { posixPath } from "./private/utils";
 import type { StageOptions } from "./wave";
@@ -24,7 +25,9 @@ export interface PipelineJobProps extends JobProps {
    * @remarks
    * This enables the job to authenticate and interact with AWS resources.
    */
-  readonly awsCredentials: AwsCredentialsProvider;
+  readonly awsCredentials: IAwsCredentialsProvider;
+
+  readonly dockerCredentials?: DockerCredentials[];
 
   /**
    * Optional version overrides for specific GitHub Actions.
@@ -54,7 +57,16 @@ export interface PipelineJobProps extends JobProps {
  */
 export class PipelineJob extends Job {
   /** AWS credentials provider associated with this job. */
-  public readonly awsCredentials: AwsCredentialsProvider;
+  public readonly awsCredentials: IAwsCredentialsProvider;
+
+  /**
+   * Docker credentials required for registry authentication within the workflow.
+   *
+   * @remarks
+   * Specify one or more `DockerCredentials` instances for authenticating against Docker
+   * registries (such as DockerHub, ECR, GHCR, or custom registries) used in the pipeline.
+   */
+  public readonly dockerCredentials?: DockerCredentials[];
 
   /** Specific version overrides for GitHub Actions, if any are provided. */
   public readonly versionOverrides: Record<string, string>;
@@ -73,6 +85,7 @@ export class PipelineJob extends Job {
     super(scope, id, props);
 
     this.awsCredentials = props.awsCredentials;
+    this.dockerCredentials = props.dockerCredentials;
     this.versionOverrides = props.versionOverrides ?? {};
     this.cdkoutDir = props.cdkoutDir;
   }
@@ -137,14 +150,21 @@ export class SynthPipelineJob extends PipelineJob {
       version: this.lookupVersion(actions.CheckoutV4.IDENTIFIER),
     });
 
-    if (props.preBuild) props.preBuild.steps(this);
-
     if (props.installCommands && props.installCommands.length > 0) {
       new RunStep(this, "install", {
         name: "Install",
         run: props.installCommands,
       });
     }
+
+    // Docker credentials configuration
+    if (this.dockerCredentials) {
+      for (const creds of this.dockerCredentials) {
+        creds.credentialSteps(this);
+      }
+    }
+
+    if (props.preBuild) props.preBuild.steps(this);
 
     new RunStep(this, "build", {
       name: "Build",
@@ -262,6 +282,13 @@ export class PublishPipelineJob extends PipelineJob {
 
     // AWS credentials configuration
     props.awsCredentials.credentialSteps(this, "us-east-1");
+
+    // Docker credentials configuration
+    if (this.dockerCredentials) {
+      for (const creds of this.dockerCredentials) {
+        creds.credentialSteps(this);
+      }
+    }
 
     if (props.prePublish) props.prePublish.steps(this);
 

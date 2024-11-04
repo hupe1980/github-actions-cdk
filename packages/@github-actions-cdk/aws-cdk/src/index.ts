@@ -1,5 +1,6 @@
 export * from "./adapter";
 export * from "./aws-credentials";
+export * from "./docker-credentials";
 export * from "./jobs";
 export * from "./oidc";
 export * from "./pipeline";

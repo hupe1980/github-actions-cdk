@@ -8,17 +8,17 @@ import {
 } from "github-actions-cdk";
 
 /**
- * Abstract class representing a provider for AWS credentials.
+ * Interface representing a provider for AWS credentials.
  *
- * Implementations of this class are responsible for defining how
+ * Implementations of this interface are responsible for defining how
  * AWS credentials are obtained and how they are configured within
  * GitHub Actions jobs.
  */
-export abstract class AwsCredentialsProvider {
+export interface IAwsCredentialsProvider {
   /**
    * Retrieves the permission level required by this credentials provider.
    */
-  public abstract permissionLevel(): PermissionLevel;
+  permissionLevel(): PermissionLevel;
 
   /**
    * Generates a series of steps to configure AWS credentials for a GitHub Actions job.
@@ -28,7 +28,7 @@ export abstract class AwsCredentialsProvider {
    * @param assumeRoleArn - An optional ARN for a role to assume with elevated permissions.
    * @returns An array of `RegularStep` instances to be executed in the job.
    */
-  public abstract credentialSteps(job: Job, region: string, assumeRoleArn?: string): RegularStep[];
+  credentialSteps(job: Job, region: string, assumeRoleArn?: string): RegularStep[];
 }
 
 /**
@@ -57,7 +57,7 @@ export interface GitHubSecretsProviderProps {
 /**
  * AWS credentials provider that retrieves credentials from GitHub Secrets.
  */
-class GitHubSecretsProvider extends AwsCredentialsProvider {
+class GitHubSecretsProvider implements IAwsCredentialsProvider {
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
   private readonly sessionToken?: string;
@@ -68,7 +68,6 @@ class GitHubSecretsProvider extends AwsCredentialsProvider {
    * @param props - Optional properties for configuring the GitHub Secrets provider.
    */
   constructor(props?: GitHubSecretsProviderProps) {
-    super();
     this.accessKeyId = props?.accessKeyId ?? "AWS_ACCESS_KEY_ID";
     this.secretAccessKey = props?.secretAccessKey ?? "AWS_SECRET_ACCESS_KEY";
     this.sessionToken = props?.sessionToken;
@@ -132,7 +131,7 @@ export interface OpenIdConnectProviderProps {
 /**
  * AWS credentials provider that uses OpenID Connect for authentication.
  */
-class OpenIdConnectProvider extends AwsCredentialsProvider {
+class OpenIdConnectProvider implements IAwsCredentialsProvider {
   private readonly gitHubActionsRoleArn: string;
   private readonly roleSessionName?: string;
 
@@ -143,8 +142,6 @@ class OpenIdConnectProvider extends AwsCredentialsProvider {
    * @throws Error if `gitHubActionsRoleArn` is unresolved.
    */
   constructor(props: OpenIdConnectProviderProps) {
-    super();
-
     if (Token.isUnresolved(props.gitHubActionsRoleArn)) {
       throw new Error(
         `The provided gitHubActionsRoleArn (${props.gitHubActionsRoleArn}) is unresolved. Please provide a concrete value.`,
@@ -229,7 +226,7 @@ export class AwsCredentials {
    * @param props - Optional properties for configuring the GitHub Secrets provider.
    * @returns An instance of `GitHubSecretsProvider`.
    */
-  static fromGitHubSecrets(props?: GitHubSecretsProviderProps): AwsCredentialsProvider {
+  static fromGitHubSecrets(props?: GitHubSecretsProviderProps): IAwsCredentialsProvider {
     return new GitHubSecretsProvider(props);
   }
 
@@ -239,7 +236,7 @@ export class AwsCredentials {
    * @param props - Properties for configuring the OpenID Connect provider.
    * @returns An instance of `OpenIdConnectProvider`.
    */
-  static fromOpenIdConnect(props: OpenIdConnectProviderProps): AwsCredentialsProvider {
+  static fromOpenIdConnect(props: OpenIdConnectProviderProps): IAwsCredentialsProvider {
     return new OpenIdConnectProvider(props);
   }
 }
