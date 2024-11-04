@@ -19,6 +19,31 @@ import {
 import { StageJob, Synth } from "./steps";
 
 /**
+ * Interface representing optional job phases for a build and publish jobs ot the pipeline.
+ */
+export interface PipelinePhases {
+  /**
+   * Optional phase for the synth job to execute before the main build steps.
+   */
+  readonly preBuild?: IJobPhase;
+
+  /**
+   * Optional phase for the synth job to execute after the main build steps.
+   */
+  readonly postBuild?: IJobPhase;
+
+  /**
+   * Optional phase for publish jobs to execute before the main publish steps.
+   */
+  readonly prePublish?: IJobPhase;
+
+  /**
+   * Optional phase for publish jobs to execute after the main publish steps.
+   */
+  readonly postPublish?: IJobPhase;
+}
+
+/**
  * Properties for defining a Pipeline Workflow.
  *
  * @remarks
@@ -46,11 +71,14 @@ export interface PipelineWorkflowProps extends WorkflowProps {
   /** Configuration options for individual stacks in the pipeline. */
   readonly stackOptions: Record<string, StackOptions>;
 
-  /** Optional job phase to run before the main build jobs. */
-  readonly preBuild?: IJobPhase;
-
-  /** Optional job phase to run after the main build jobs. */
-  readonly postBuild?: IJobPhase;
+  /**
+   * Optional phases to execute before or after main build and publish steps.
+   *
+   * @remarks
+   * Defines custom phases (e.g., pre- and post-build/publish) that run at specific points in the pipeline workflow,
+   * allowing for additional setup, cleanup, or validation steps.
+   */
+  readonly phases?: PipelinePhases;
 
   /** Provider for AWS credentials required to interact with AWS services. */
   readonly awsCredentials: AwsCredentialsProvider;
@@ -113,15 +141,21 @@ export class PipelineWorkflow extends Workflow {
                   node.uniqueId,
                   this.getDependencies(node),
                   node.data.step,
-                  props.preBuild,
-                  props.postBuild,
+                  props.phases?.preBuild,
+                  props.phases?.postBuild,
                 );
               } else if (node.data?.step instanceof StageJob) {
                 this.createStageJob(node.uniqueId, this.getDependencies(node), node.data.step);
               }
               break;
             case "publish-assets":
-              this.createPublishJob(node.uniqueId, this.getDependencies(node), node.data.assets);
+              this.createPublishJob(
+                node.uniqueId,
+                this.getDependencies(node),
+                node.data.assets,
+                props.phases?.prePublish,
+                props.phases?.postPublish,
+              );
               break;
             case "execute":
               this.createDeployJob(node.uniqueId, this.getDependencies(node), node.data.stack);
@@ -157,11 +191,11 @@ export class PipelineWorkflow extends Workflow {
         contents: PermissionLevel.READ,
         idToken: this.awsCredentials.permissionLevel(),
       },
+      installCommands: synth.installCommands,
+      commands: synth.commands,
       env: synth.env,
       preBuild,
       postBuild,
-      installCommands: synth.installCommands,
-      commands: synth.commands,
       awsCredentials: this.awsCredentials,
       versionOverrides: this.versionOverrides,
       cdkoutDir: this.cdkoutDir,
@@ -175,7 +209,13 @@ export class PipelineWorkflow extends Workflow {
    * @param needs - List of dependencies for this job.
    * @param assets - List of assets to publish.
    */
-  protected createPublishJob(id: string, needs: string[], assets: StackAsset[]): void {
+  protected createPublishJob(
+    id: string,
+    needs: string[],
+    assets: StackAsset[],
+    prePublish?: IJobPhase,
+    postPublish?: IJobPhase,
+  ): void {
     new PublishPipelineJob(this, id, {
       name: `Publish Assets ${id}`,
       needs,
@@ -184,6 +224,8 @@ export class PipelineWorkflow extends Workflow {
         idToken: this.awsCredentials.permissionLevel(),
       },
       assets,
+      prePublish,
+      postPublish,
       assetHashMap: this.assetHashMap,
       awsCredentials: this.awsCredentials,
       versionOverrides: this.versionOverrides,

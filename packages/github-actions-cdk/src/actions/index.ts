@@ -1,6 +1,7 @@
 export * from "./aws-cloudformation-github-deploy";
 export * from "./checkout";
 export * from "./configure-aws-credentials";
+export * from "./docker-login";
 export * from "./download-artifact";
 export * from "./setup-go";
 export * from "./setup-node";

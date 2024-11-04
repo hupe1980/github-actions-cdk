@@ -6,7 +6,7 @@ import type { AwsCredentialsProvider } from "./aws-credentials";
 import type { IJobPhase, StackOptions } from "./jobs";
 import type { Synth } from "./steps";
 import { GitHubWave, type IWaveStageAdder, type StageOptions, type WaveOptions } from "./wave";
-import { PipelineWorkflow } from "./workflow";
+import { type PipelinePhases, PipelineWorkflow } from "./workflow";
 
 /**
  * Properties for configuring the GitHub Actions pipeline.
@@ -15,7 +15,7 @@ import { PipelineWorkflow } from "./workflow";
  * Provides options for defining the workflow environment, AWS credentials, job phases, and version overrides,
  * along with paths and naming conventions for GitHub Actions workflows.
  */
-export interface GitHubActionsPipelineProps {
+export interface GitHubActionsPipelineProps extends PipelinePhases {
   /**
    * Optional name for the GitHub Actions workflow.
    *
@@ -51,16 +51,6 @@ export interface GitHubActionsPipelineProps {
    * Environment variables to set in the workflow.
    */
   readonly workflowEnv?: Record<string, string>;
-
-  /**
-   * Optional phase for jobs to execute before the main build steps.
-   */
-  readonly preBuild?: IJobPhase;
-
-  /**
-   * Optional phase for jobs to execute after the main build steps.
-   */
-  readonly postBuild?: IJobPhase;
 
   /**
    * AWS credentials provider for authenticating AWS actions.
@@ -156,6 +146,8 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
   private readonly workflowEnv?: Record<string, string>;
   private readonly preBuild?: IJobPhase;
   private readonly postBuild?: IJobPhase;
+  private readonly prePublish?: IJobPhase;
+  private readonly postPublish?: IJobPhase;
   private readonly awsCredentials: AwsCredentialsProvider;
   private readonly versionOverrides?: Record<string, string>;
   private readonly stackOptions: Record<string, StackOptions> = {};
@@ -178,6 +170,8 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
     this.workflowEnv = props.workflowEnv;
     this.preBuild = props.preBuild;
     this.postBuild = props.postBuild;
+    this.prePublish = props.prePublish;
+    this.postPublish = props.postPublish;
     this.awsCredentials = props.awsCredentials;
     this.versionOverrides = props.versionOverrides;
     this.adapter = new AwsCdkAdapter(this, { outdir: this.workflowOutdir });
@@ -254,8 +248,12 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
       env: this.workflowEnv,
       pipeline: this,
       stackOptions: this.stackOptions,
-      preBuild: this.preBuild,
-      postBuild: this.postBuild,
+      phases: {
+        preBuild: this.preBuild,
+        postBuild: this.postBuild,
+        prePublish: this.prePublish,
+        postPublish: this.postPublish,
+      },
       cdkoutDir: app.outdir,
       awsCredentials: this.awsCredentials,
       versionOverrides: this.versionOverrides,

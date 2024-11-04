@@ -17,7 +17,7 @@ class GithubActionsStack extends Stack {
 
         const pipeline = new GitHubActionsPipeline(this, 'Pipeline', {
             workflowOutdir: `${__dirname}/.github/workflows`,
-            // singlePublisherPerAssetType: true,
+            singlePublisherPerAssetType: true,
             preBuild: { steps: (job) => {
                 new RunStep(job, 'pre', {
                     run: 'echo "Hello, world!"',

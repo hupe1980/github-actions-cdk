@@ -1,20 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { StackAsset } from "aws-cdk-lib/pipelines";
+import { posixPath } from "./utils";
 
-// Constants
 /**
  * The prefix used for asset hash names in the generated script.
  */
 const ASSET_HASH_NAME = "asset-hash";
-
-/**
- * Converts a given path to POSIX format (using forward slashes).
- *
- * @param p - The input path.
- * @returns The path in POSIX format.
- */
-const posixPath = (p: string) => p.split(path.sep).join(path.posix.sep);
 
 /**
  * A helper class that generates a single script file required to publish assets.

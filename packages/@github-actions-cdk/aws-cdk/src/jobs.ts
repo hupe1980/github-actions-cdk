@@ -5,6 +5,7 @@ import type { Construct } from "constructs";
 import { Job, type JobProps, RunStep, actions } from "github-actions-cdk";
 import type { AwsCredentialsProvider } from "./aws-credentials";
 import { PublishAssetScriptGenerator } from "./private/assets";
+import { posixPath } from "./private/utils";
 import type { StageOptions } from "./wave";
 
 const CDKOUT_ARTIFACT = "cdk.out";
@@ -172,6 +173,16 @@ export class SynthPipelineJob extends PipelineJob {
  */
 export interface PublishPipelineJobProps extends PipelineJobProps {
   /**
+   * Optional pre-publish phase steps.
+   */
+  readonly prePublish?: IJobPhase;
+
+  /**
+   * Optional post-publish phase steps.
+   */
+  readonly postPublish?: IJobPhase;
+
+  /**
    * The stack assets to be published.
    *
    * @remarks
@@ -230,6 +241,10 @@ export class PublishPipelineJob extends PipelineJob {
   constructor(scope: Construct, id: string, props: PublishPipelineJobProps) {
     super(scope, id, props);
 
+    if (props.assets.length === 0) {
+      throw new Error("Asset Publish step must have at least 1 asset");
+    }
+
     // Download artifact step
     new actions.DownloadArtifactV4(this, "DownloadArtifact", {
       name: `Download ${CDKOUT_ARTIFACT}`,
@@ -248,6 +263,8 @@ export class PublishPipelineJob extends PipelineJob {
     // AWS credentials configuration
     props.awsCredentials.credentialSteps(this, "us-east-1");
 
+    if (props.prePublish) props.prePublish.steps(this);
+
     const scriptGen = new PublishAssetScriptGenerator(props.cdkoutDir, props.assets);
 
     // Write script to cdk.out directory
@@ -263,6 +280,12 @@ export class PublishPipelineJob extends PipelineJob {
       props.assetHashMap[hash] = `\${{ needs.${this.id}.outputs.${outputName} }}`;
       this.addOutput(outputName, publishStep.outputExpression(outputName));
     });
+
+    if (props.postPublish) props.postPublish.steps(this);
+  }
+
+  public containsDockerAsset(): boolean {
+    return this.id.includes("DockerAsset");
   }
 }
 
@@ -398,14 +421,4 @@ export class StagePipelineJob extends PipelineJob {
     super(scope, id, props);
     props.phase.steps(this);
   }
-}
-
-/**
- * Converts a Windows or POSIX path to a POSIX path format.
- *
- * @param windowsOrPosixPath - The input path in either Windows or POSIX format.
- * @returns The normalized POSIX path.
- */
-function posixPath(windowsOrPosixPath: string): string {
-  return windowsOrPosixPath.split(path.sep).join(path.posix.sep);
 }
