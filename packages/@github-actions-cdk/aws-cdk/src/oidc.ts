@@ -131,6 +131,7 @@ export class GitHubActionsRole extends Role {
             [`${RAW_ENDPOINT}:sub`]: formatRepos(props.repos ?? []).concat(
               props.subjectClaims ?? [],
             ),
+            [`${RAW_ENDPOINT}:aud`]: "sts.amazonaws.com",
           },
         },
         "sts:AssumeRoleWithWebIdentity",

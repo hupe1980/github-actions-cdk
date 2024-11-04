@@ -1,11 +1,10 @@
 {
-  "name": "@github-actions-cdk/aws-cdk",
+  "name": "@github-actions-cdk/cdktf-provider-aws",
   "version": "0.0.21",
-  "description": "A TypeScript library for building GitHub Actions pipelines specifically for AWS CDK applications. This library allows developers to define, structure, and automate CI/CD workflows tailored to CDK projects, making it easy to deploy infrastructure through GitHub Actions in a type-safe and modular way.",
+  "description": "A TypeScript library for creating and managing GitHub Actions workflows using Constructs, enabling type-safe and modular CI/CD automation.",
   "keywords": [
     "github",
     "actions",
-    "aws-cdk",
     "cdk",
     "typescript",
     "python",
@@ -42,15 +41,15 @@
     "test": "jest --passWithNoTests"
   },
   "peerDependencies": {
-    "aws-cdk-lib": "^2.164.1",
-    "constructs": "^10.4.2",
-    "github-actions-cdk": "^0.0.20"
+    "cdktf": "^0.20.9",
+    "@cdktf/provider-aws": "^19.40.0",
+    "constructs": "^10.4.2"
   },
   "dependencies": {},
   "devDependencies": {
-    "aws-cdk-lib": "2.164.1",
-    "constructs": "10.4.2",
-    "github-actions-cdk": "0.0.20"
+    "cdktf": "0.20.9",
+    "@cdktf/provider-aws": "19.40.0",
+    "constructs": "10.4.2"
   },
   "stability": "experimental",
   "jsii": {
@@ -66,8 +65,8 @@
     },
     "targets": {
       "python": {
-        "module": "github_actions_cdk.aws_cdk",
-        "distName": "github-actions-cdk.aws-cdk"
+        "module": "github_actions_cdk.cdktf_provider_aws",
+        "distName": "github-actions-cdk.cdktf-provider-aws"
       }
     }
   },

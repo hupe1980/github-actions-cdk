@@ -1,13 +1,12 @@
-import * as fs from "node:fs";
 import * as path from "node:path";
 
 import type { StackAsset, StackDeployment } from "aws-cdk-lib/pipelines";
 import type { Construct } from "constructs";
 import { Job, type JobProps, RunStep, actions } from "github-actions-cdk";
 import type { AwsCredentialsProvider } from "./aws-credentials";
+import { PublishAssetScriptGenerator } from "./private/assets";
 import type { StageOptions } from "./wave";
 
-const ASSET_HASH_NAME = "asset-hash";
 const CDKOUT_ARTIFACT = "cdk.out";
 
 /**
@@ -249,49 +248,20 @@ export class PublishPipelineJob extends PipelineJob {
     // AWS credentials configuration
     props.awsCredentials.credentialSteps(this, "us-east-1");
 
-    // Helper functions to manage file paths and asset names
-    const relativeToAssembly = (p: string) =>
-      posixPath(path.join(props.cdkoutDir, path.relative(path.resolve(props.cdkoutDir), p)));
+    const scriptGen = new PublishAssetScriptGenerator(props.cdkoutDir, props.assets);
 
-    const assetName = (idx: number) => `${ASSET_HASH_NAME}-${idx + 1}`;
+    // Write script to cdk.out directory
+    const scriptFilename = path.join(props.cdkoutDir, `publish-assets-${id}.sh`);
+    scriptGen.writePublishScript(scriptFilename);
 
-    // Array to hold paths of publish step files
-    const publishStepFiles: string[] = [];
-
-    // Loop through each asset and create publish step files
-    props.assets.forEach((asset, idx) => {
-      const { assetId, assetManifestPath, assetSelector } = asset;
-
-      const fileContents: string[] = [
-        "set -ex",
-        `npx cdk-assets --path "${relativeToAssembly(assetManifestPath)}" --verbose publish "${assetSelector}"`,
-      ];
-
-      fileContents.push(`echo '${ASSET_HASH_NAME}=${assetId}' >> $GITHUB_OUTPUT`);
-      props.assetHashMap[assetId] = `\${{ needs.${this.id}.outputs.${assetName(idx)} }}`;
-
-      // Define a unique publish step file path for each asset
-      const publishStepFile = posixPath(
-        path.join(
-          path.dirname(relativeToAssembly(assetManifestPath)),
-          `publish-${id}-step${idx + 1}.sh`,
-        ),
-      );
-
-      fs.mkdirSync(path.dirname(publishStepFile), { recursive: true });
-      fs.writeFileSync(publishStepFile, fileContents.join("\n"), { encoding: "utf-8" });
-
-      publishStepFiles.push(publishStepFile);
+    const publishStep = new RunStep(this, "publish", {
+      name: `Publish ${id}`,
+      run: `/bin/bash ${props.cdkoutDir}/${posixPath(path.relative(props.cdkoutDir, scriptFilename))}`,
     });
 
-    // Create a RunSteps for each publish step file
-    publishStepFiles.forEach((publishStepFile, idx) => {
-      const publishStep = new RunStep(this, `publish-${idx + 1}`, {
-        name: `Publish ${id}`,
-        run: `/bin/bash ./cdk.out/${posixPath(path.relative(props.cdkoutDir, publishStepFile))}`,
-      });
-
-      this.addOutput(assetName(idx), publishStep.outputExpression(ASSET_HASH_NAME));
+    scriptGen.assetIdMap.forEach((outputName, hash) => {
+      props.assetHashMap[hash] = `\${{ needs.${this.id}.outputs.${outputName} }}`;
+      this.addOutput(outputName, publishStep.outputExpression(outputName));
     });
   }
 }
