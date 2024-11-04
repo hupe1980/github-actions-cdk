@@ -11,9 +11,39 @@ import { Workflow, type WorkflowProps } from "./workflow";
  * Configuration properties for setting up a `Project` instance.
  */
 export interface ProjectProps {
+  /**
+   * Directory for storing synthesized workflow files.
+   *
+   * @default "./.github/workflows"
+   */
   readonly outdir?: string;
+
+  /**
+   * Skips workflow validation if set to true.
+   *
+   * @default false
+   */
   readonly skipValidation?: boolean;
+
+  /**
+   * Skips protection against workflow file diffs if set to true.
+   *
+   * @default false
+   */
+  readonly skipDiffProtection?: boolean;
+
+  /**
+   * Enables additional checks, such as version verification for external actions.
+   *
+   * @default false
+   */
   readonly additionalChecks?: boolean;
+
+  /**
+   * Allows continuation on error annotations if set to true.
+   *
+   * @default false
+   */
   readonly continueOnErrorAnnotations?: boolean;
 }
 
@@ -23,6 +53,7 @@ export interface ProjectProps {
 export class Project extends RootConstruct {
   public readonly outdir: string;
   public readonly skipValidation?: boolean;
+  public readonly skipDiffProtection?: boolean;
   public readonly additionalChecks?: boolean;
   public readonly continueOnErrorAnnotations?: boolean;
   public readonly manifest: Manifest;
@@ -31,11 +62,19 @@ export class Project extends RootConstruct {
     super();
     this.outdir = props.outdir ?? "./.github/workflows";
     this.skipValidation = props.skipValidation ?? false;
+    this.skipDiffProtection = props.skipDiffProtection ?? false;
     this.additionalChecks = props.additionalChecks ?? false;
     this.continueOnErrorAnnotations = props.continueOnErrorAnnotations ?? false;
     this.manifest = new Manifest(getPackageVersion() ?? "0.0.0", this.outdir);
   }
 
+  /**
+   * Adds a new workflow to the project.
+   *
+   * @param id - Identifier for the workflow.
+   * @param props - Configuration properties for the workflow.
+   * @returns The newly created `Workflow` instance.
+   */
   public addWorkflow(id: string, props: WorkflowProps): Workflow {
     return new Workflow(this, id, props);
   }
@@ -67,12 +106,15 @@ export class Project extends RootConstruct {
   }
 
   /**
-   * Creates a synthesis session object.
+   * Creates a synthesis session object with configuration for synthesis.
+   *
+   * @returns A configured `ISynthesisSession` object.
    */
   protected createSynthesisSession(): ISynthesisSession {
     return {
       outdir: this.outdir,
       skipValidation: this.skipValidation,
+      skipDiffProtection: this.skipDiffProtection,
       manifest: this.manifest,
     };
   }
@@ -94,6 +136,9 @@ export class Project extends RootConstruct {
 
   /**
    * Handles any errors encountered during synthesis.
+   *
+   * @param error - The error encountered during synthesis.
+   * @throws An error if validation fails or if another error type is encountered.
    */
   protected handleSynthesisError(error: unknown): void {
     if (isValidationError(error)) {
@@ -126,6 +171,7 @@ export class Project extends RootConstruct {
    * Prints annotations from a workflow manifest to the console.
    *
    * @param manifest - The `IManifest` object containing workflows and their annotations.
+   * @param printStacktrace - Optional flag to print stack trace for each annotation.
    */
   private printManifestAnnotations(manifest: IManifest, printStacktrace = false): void {
     console.log(`Manifest Version: ${manifest.version}`);
@@ -151,7 +197,6 @@ export class Project extends RootConstruct {
           );
           if (annotation.stacktrace && printStacktrace) {
             console.log("    Stack trace:");
-            // biome-ignore lint/complexity/noForEach: This is a simple loop to print the stack trace.
             annotation.stacktrace.forEach((line) => {
               console.log(`      ${line}`);
             });

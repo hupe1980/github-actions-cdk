@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 import type { IConstruct } from "constructs";
 import {
@@ -8,7 +9,7 @@ import {
 } from "./annotations";
 import { Aspects, type IAspect } from "./aspect";
 import type { Manifest } from "./manifest";
-import { YamlFile } from "./private/yaml";
+import { YamlGenerator } from "./private/yaml";
 import type { Workflow } from "./workflow";
 
 const VALIDATION_ERROR_SYMBOL = Symbol("github-actions-cdk.ValidationError");
@@ -37,6 +38,7 @@ export interface ValidationErrorMessage {
  */
 export function createValidationError(message: string, errors: ValidationErrorMessage[]): Error {
   const error = new Error(message);
+  // Adds custom properties to classify it as a validation error
   // @ts-ignore: Allowing dynamic property assignment
   error.errors = errors;
   // @ts-ignore: Allowing dynamic property assignment
@@ -74,6 +76,13 @@ export interface ISynthesisSession {
    * @default false
    */
   readonly skipValidation?: boolean;
+
+  /**
+   * Indicates whether to skip diff protection, ensuring workflow consistency.
+   *
+   * @default false
+   */
+  readonly skipDiffProtection?: boolean;
 
   /**
    * The manifest that records synthesized workflows.
@@ -128,9 +137,34 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
 
     const filename = path.join(session.outdir, `${this.workflow.id}.yml`);
 
-    const yaml = new YamlFile(filename, this.workflow._synth(), this.workflow.commentAtTop);
+    const yamlGen = new YamlGenerator(this.workflow._synth());
+    yamlGen.setCommentAtTop(this.workflow.commentAtTop);
+    const yamlContent = yamlGen.toYaml();
 
-    yaml.writeFile();
+    if (!session.skipDiffProtection) {
+      this.diffProtection(filename, yamlContent);
+    }
+
+    fs.writeFileSync(filename, yamlContent, { encoding: "utf8" });
+  }
+
+  /**
+   * Ensures that the workflow file has not been modified during synthesis.
+   *
+   * @param filename - The path of the workflow YAML file.
+   * @param yamlContent - The generated YAML content to compare.
+   * @throws {Error} if the existing content differs from the generated content.
+   */
+  protected diffProtection(filename: string, yamlContent: string): void {
+    const githubWorkflow = this.workflow.name ?? filename;
+    if (process.env.GITHUB_WORKFLOW === githubWorkflow) {
+      const existingContent = fs.readFileSync(filename, "utf8");
+      if (existingContent !== yamlContent) {
+        throw new Error(
+          `Workflow file ${filename} has been modified by the workflow itself. This is not allowed.`,
+        );
+      }
+    }
   }
 
   /**
@@ -161,7 +195,7 @@ export class WorkflowSynthesizer implements IWorkflowSynthesizer {
    *
    * @returns An array of validation error messages along with their source constructs.
    */
-  private collectValidationErrors(): { message: string; source: IConstruct }[] {
+  private collectValidationErrors(): ValidationErrorMessage[] {
     return this.workflow.node
       .findAll()
       .flatMap((node) => node.node.validate().map((error) => ({ message: error, source: node })));
@@ -213,7 +247,7 @@ export function invokeAspects(root: IConstruct) {
 
         if (!nestedAspectWarning && nodeAspectsCount !== aspects.all.length) {
           Annotations.of(construct).addWarning(
-            "We detected an Aspect was added via another Aspect, and will not be applied",
+            "An aspect was added during another aspect's application and will not be applied.",
           );
           nestedAspectWarning = true;
         }
