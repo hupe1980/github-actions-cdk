@@ -197,6 +197,7 @@ export class Project extends RootConstruct {
           );
           if (annotation.stacktrace && printStacktrace) {
             console.log("    Stack trace:");
+            // biome-ignore lint/complexity/noForEach: This is a simple loop to print the stack trace.
             annotation.stacktrace.forEach((line) => {
               console.log(`      ${line}`);
             });
