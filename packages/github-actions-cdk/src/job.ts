@@ -3,6 +3,7 @@ import { Component } from "./component";
 import type { Defaults } from "./defaults";
 import type { Permissions } from "./permissions";
 import { snakeCaseKeys } from "./private/utils";
+import { Runner } from "./runner";
 import { RegularStep, type RegularStepProps, RunStep, type RunStepProps, StepBase } from "./step";
 import { JobValidator } from "./validator";
 
@@ -158,7 +159,7 @@ export interface JobProps {
   readonly outputs?: Record<string, string>;
 
   /** Runner environment, e.g., "ubuntu-latest". */
-  readonly runsOn?: string[] | string;
+  readonly runner?: Runner;
 
   /** Timeout duration for the job, in minutes. */
   readonly timeoutMinutes?: number;
@@ -245,7 +246,7 @@ export class Job extends Component {
     this.env = props.env;
     this.defaults = props.defaults;
     this.environment = props.environment;
-    this.runsOn = props.runsOn ?? "ubuntu-latest";
+    this.runsOn = props.runner?.runsOn ?? Runner.UBUNTU_LATEST.runsOn;
     this.timeoutMinutes = props.timeoutMinutes;
     this.strategy = props.strategy;
     this.continueOnError = props.continueOnError;

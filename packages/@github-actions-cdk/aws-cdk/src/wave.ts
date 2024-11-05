@@ -1,7 +1,7 @@
 import type { Stage } from "aws-cdk-lib";
 import { type StageDeployment, Wave, type WaveProps } from "aws-cdk-lib/pipelines";
-import type { Environment } from "github-actions-cdk";
 import type { StageJob } from "./steps";
+import type { JobSettings } from "./workflow";
 
 /**
  * Interface for adding stages to a wave in the GitHub Actions pipeline.
@@ -56,11 +56,9 @@ export interface StageOptions {
   readonly postJobs?: StageJob[];
 
   /**
-   * Optional GitHub environment configuration for the stage.
-   *
-   * This configuration specifies the environment context in which the jobs will run.
+   * Optional settings to configure the jobs within the stage.
    */
-  readonly gitHubEnvironment?: Environment;
+  readonly jobSettings?: JobSettings;
 
   /**
    * Optional capabilities that the stack should acknowledge during deployment.

@@ -22,7 +22,6 @@ jobs:
     env: {}
     permissions:
       contents: read
-      id-token: write
     steps:
       - id: checkout
         name: Checkout

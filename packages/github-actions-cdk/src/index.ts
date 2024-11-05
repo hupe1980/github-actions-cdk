@@ -13,6 +13,7 @@ export * from "./manifest";
 export * from "./permissions";
 export * from "./project";
 export * from "./rules";
+export * from "./runner";
 export * from "./step";
 export * from "./synthesizer";
 export * from "./trigger";

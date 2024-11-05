@@ -3,7 +3,7 @@ import * as path from "node:path";
 import type { StackAsset, StackDeployment } from "aws-cdk-lib/pipelines";
 import type { Construct } from "constructs";
 import { Job, type JobProps, RunStep, actions } from "github-actions-cdk";
-import type { IAwsCredentialsProvider } from "./aws-credentials";
+import type { AwsCredentialsProvider } from "./aws-credentials";
 import type { DockerCredentials } from "./docker-credentials";
 import { PublishAssetScriptGenerator } from "./private/assets";
 import { posixPath } from "./private/utils";
@@ -25,8 +25,16 @@ export interface PipelineJobProps extends JobProps {
    * @remarks
    * This enables the job to authenticate and interact with AWS resources.
    */
-  readonly awsCredentials: IAwsCredentialsProvider;
+  readonly awsCredentials: AwsCredentialsProvider;
 
+  /**
+   * Docker credentials required for authenticating with Docker registries.
+   *
+   * @remarks
+   * Specifies one or more instances of `DockerCredentials` to support
+   * authentication with Docker registries (such as DockerHub, ECR, or GHCR).
+   * This is necessary if the job involves pulling or pushing Docker images.
+   */
   readonly dockerCredentials?: DockerCredentials[];
 
   /**
@@ -57,7 +65,7 @@ export interface PipelineJobProps extends JobProps {
  */
 export class PipelineJob extends Job {
   /** AWS credentials provider associated with this job. */
-  public readonly awsCredentials: IAwsCredentialsProvider;
+  public readonly awsCredentials: AwsCredentialsProvider;
 
   /**
    * Docker credentials required for registry authentication within the workflow.
@@ -150,21 +158,14 @@ export class SynthPipelineJob extends PipelineJob {
       version: this.lookupVersion(actions.CheckoutV4.IDENTIFIER),
     });
 
+    if (props.preBuild) props.preBuild.steps(this);
+
     if (props.installCommands && props.installCommands.length > 0) {
       new RunStep(this, "install", {
         name: "Install",
         run: props.installCommands,
       });
     }
-
-    // Docker credentials configuration
-    if (this.dockerCredentials) {
-      for (const creds of this.dockerCredentials) {
-        creds.credentialSteps(this);
-      }
-    }
-
-    if (props.preBuild) props.preBuild.steps(this);
 
     new RunStep(this, "build", {
       name: "Build",
@@ -318,12 +319,21 @@ export class PublishPipelineJob extends PipelineJob {
 
 /**
  * Options for the deployment of a stack.
+ *
+ * @remarks
+ * `StackOptions` defines configuration properties specific to a stack deployment within a pipeline.
+ * This includes settings for the job environment and required capabilities for deploying resources.
  */
 export interface StackOptions {
   /**
-   * The GitHub environment for the stack deployment.
+   * Job-specific settings for configuring environment and conditions.
+   *
+   * @remarks
+   * Inherited from `StageOptions["jobSettings"]`, this property provides options for
+   * environment variables, job conditions, and other settings that control job execution
+   * within the pipeline for the stack.
    */
-  readonly environment: StageOptions["gitHubEnvironment"];
+  readonly jobSettings: StageOptions["jobSettings"];
 
   /**
    * The capabilities for the stack deployment.

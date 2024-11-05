@@ -1,13 +1,19 @@
 import { Stack, Stage } from "aws-cdk-lib";
 import { PipelineBase, type StackDeployment, type StageDeployment } from "aws-cdk-lib/pipelines";
 import { Construct } from "constructs";
+import type {
+  ConcurrencyOptions,
+  ContainerOptions,
+  JobProps,
+  WorkflowProps,
+} from "github-actions-cdk";
 import { AwsCdkAdapter } from "./adapter";
-import type { IAwsCredentialsProvider } from "./aws-credentials";
+import type { AwsCredentialsProvider } from "./aws-credentials";
 import type { DockerCredentials } from "./docker-credentials";
-import type { IJobPhase, StackOptions } from "./jobs";
+import type { StackOptions } from "./jobs";
 import type { Synth } from "./steps";
 import { GitHubWave, type IWaveStageAdder, type StageOptions, type WaveOptions } from "./wave";
-import { type PipelinePhases, PipelineWorkflow } from "./workflow";
+import { type JobSettings, type PipelinePhases, PipelineWorkflow } from "./workflow";
 
 /**
  * Properties for configuring a GitHub Actions-based deployment pipeline.
@@ -42,6 +48,29 @@ export interface GitHubActionsPipelineProps extends PipelinePhases {
   readonly workflowFilename?: string;
 
   /**
+   * Environment variables to be included in the workflow.
+   *
+   * @remarks
+   * This allows setting custom environment variables for jobs within the workflow,
+   * which may be useful for configuration or runtime settings that the jobs rely on.
+   */
+  readonly workflowEnv?: Record<string, string>;
+
+  /**
+   * Configuration for concurrency control of workflow runs.
+   */
+  readonly concurrency?: WorkflowProps["concurrency"];
+
+  /**
+   * Optional configuration settings for individual jobs within the pipeline.
+   *
+   * @remarks
+   * `JobSettings` allow fine-tuning of job-specific behavior, including conditions and
+   * environment configurations that are applied to individual jobs in the pipeline.
+   */
+  readonly jobSettings?: JobSettings;
+
+  /**
    * Enables a single publishing job per asset type within the workflow.
    *
    * @remarks
@@ -54,22 +83,13 @@ export interface GitHubActionsPipelineProps extends PipelinePhases {
   readonly singlePublisherPerAssetType?: boolean;
 
   /**
-   * Environment variables to be included in the workflow.
-   *
-   * @remarks
-   * This allows setting custom environment variables for jobs within the workflow,
-   * which may be useful for configuration or runtime settings that the jobs rely on.
-   */
-  readonly workflowEnv?: Record<string, string>;
-
-  /**
    * AWS credentials provider for actions requiring AWS authentication.
    *
    * @remarks
    * This provider supplies AWS credentials (e.g., access keys) for actions that
-   * interact with AWS services. The provider should implement `IAwsCredentialsProvider`.
+   * interact with AWS services. The provider should implement `AwsCredentialsProvider`.
    */
-  readonly awsCredentials: IAwsCredentialsProvider;
+  readonly awsCredentials: AwsCredentialsProvider;
 
   /**
    * Docker credentials required for registry authentication within the workflow.
@@ -97,6 +117,15 @@ export interface GitHubActionsPipelineProps extends PipelinePhases {
    * for deployment. This is a critical part of the CDK application lifecycle.
    */
   readonly synth: Synth;
+
+  /**
+   * Container configuration for the build environment.
+   *
+   * @remarks
+   * Specifies settings for the container environment where build actions are executed,
+   * including Docker image, registry authentication, and environment variables.
+   */
+  readonly buildContainer?: JobProps["container"];
 }
 
 /**
@@ -173,16 +202,16 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
   public readonly workflowOutdir: string;
   public readonly workflowFilename: string;
 
-  private readonly singlePublisherPerAssetType?: boolean;
+  private readonly concurrency?: ConcurrencyOptions;
   private readonly workflowEnv?: Record<string, string>;
-  private readonly preBuild?: IJobPhase;
-  private readonly postBuild?: IJobPhase;
-  private readonly prePublish?: IJobPhase;
-  private readonly postPublish?: IJobPhase;
+  private readonly jobSettings?: JobSettings;
+  private readonly singlePublisherPerAssetType?: boolean;
+  private readonly phases?: PipelinePhases;
+  private readonly buildContainer?: ContainerOptions;
   private readonly dockerCredentials?: DockerCredentials[];
   private readonly versionOverrides?: Record<string, string>;
 
-  private readonly awsCredentials: IAwsCredentialsProvider;
+  private readonly awsCredentials: AwsCredentialsProvider;
   private readonly stackOptions: Record<string, StackOptions> = {};
   private readonly adapter: AwsCdkAdapter;
 
@@ -199,15 +228,27 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
     this.workflowName = props.workflowName ?? "Deploy";
     this.workflowOutdir = props.workflowOutdir ?? ".github/workflows";
     this.workflowFilename = props.workflowFilename ?? "deploy";
-    this.singlePublisherPerAssetType = props.singlePublisherPerAssetType;
     this.workflowEnv = props.workflowEnv;
-    this.preBuild = props.preBuild;
-    this.postBuild = props.postBuild;
-    this.prePublish = props.prePublish;
-    this.postPublish = props.postPublish;
+    this.concurrency = props.concurrency;
+
+    this.jobSettings = props.jobSettings;
+
+    this.singlePublisherPerAssetType = props.singlePublisherPerAssetType;
+
+    this.buildContainer = props.buildContainer;
+
+    this.phases = {
+      preBuild: props.preBuild,
+      postBuild: props.postBuild,
+      prePublish: props.prePublish,
+      postPublish: props.postPublish,
+    };
+
     this.dockerCredentials = props.dockerCredentials;
     this.awsCredentials = props.awsCredentials;
+
     this.versionOverrides = props.versionOverrides;
+
     this.adapter = new AwsCdkAdapter(this, { outdir: this.workflowOutdir });
   }
 
@@ -219,6 +260,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
    */
   public addStageFromWave(stageDeployment: StageDeployment, options?: StageOptions): void {
     const stacks = stageDeployment.stacks;
+    this.addStackProps(stacks, "jobSettings", options?.jobSettings);
     this.addStackProps(stacks, "capabilities", options?.stackCapabilities);
   }
 
@@ -236,7 +278,7 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
     });
 
     const stacks = stageDeployment.stacks;
-    this.addStackProps(stacks, "environment", options?.gitHubEnvironment);
+    this.addStackProps(stacks, "jobSettings", options?.jobSettings);
     this.addStackProps(stacks, "capabilities", options?.stackCapabilities);
 
     return stageDeployment;
@@ -277,17 +319,15 @@ class InnerPipeline extends PipelineBase implements IWaveStageAdder {
 
     new PipelineWorkflow(this.adapter, this.workflowFilename, {
       name: this.workflowName,
-      singlePublisherPerAssetType: this.singlePublisherPerAssetType,
+      concurrency: this.concurrency,
       commentAtTop: this.renderYamlComment(names),
       env: this.workflowEnv,
+      jobSettings: this.jobSettings,
       pipeline: this,
+      singlePublisherPerAssetType: this.singlePublisherPerAssetType,
       stackOptions: this.stackOptions,
-      phases: {
-        preBuild: this.preBuild,
-        postBuild: this.postBuild,
-        prePublish: this.prePublish,
-        postPublish: this.postPublish,
-      },
+      buildContainer: this.buildContainer,
+      phases: this.phases,
       cdkoutDir: app.outdir,
       awsCredentials: this.awsCredentials,
       dockerCredentials: this.dockerCredentials,

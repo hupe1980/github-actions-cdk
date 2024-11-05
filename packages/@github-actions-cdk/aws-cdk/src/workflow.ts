@@ -6,9 +6,14 @@ import {
   isGraph,
 } from "aws-cdk-lib/pipelines/lib/helpers-internal";
 import type { Construct } from "constructs";
-import { PermissionLevel, Workflow, type WorkflowProps } from "github-actions-cdk";
-import type { IAwsCredentialsProvider } from "./aws-credentials";
-import type { DockerCredentials } from "./docker-credentials";
+import {
+  type ContainerOptions,
+  type JobProps,
+  PermissionLevel,
+  Runner,
+  Workflow,
+  type WorkflowProps,
+} from "github-actions-cdk";
 import {
   DeployPipelineJob,
   type IJobPhase,
@@ -19,6 +24,29 @@ import {
   SynthPipelineJob,
 } from "./jobs";
 import { StageJob, Synth } from "./steps";
+
+/**
+ * Settings to configure specific job options in the pipeline workflow.
+ */
+export interface JobSettings {
+  /**
+   * Specifies the environment configuration for the job.
+   *
+   * @remarks
+   * Defines the environment variables, secrets, and other environment-specific
+   * settings for the job execution in the GitHub Actions workflow.
+   */
+  readonly environment?: JobProps["environment"];
+
+  /**
+   * Optional condition that determines if the job should run.
+   *
+   * @remarks
+   * An expression or string that evaluates to a boolean. If provided, this condition
+   * must be met for the job to execute.
+   */
+  readonly condition?: JobProps["condition"];
+}
 
 /**
  * Interface representing optional job phases for a build and publish jobs ot the pipeline.
@@ -51,12 +79,21 @@ export interface PipelinePhases {
  * @remarks
  * This interface extends WorkflowProps and adds properties specific to AWS CDK Pipelines and job execution.
  */
-export interface PipelineWorkflowProps extends WorkflowProps {
+export interface PipelineWorkflowProps extends WorkflowProps, PipelineJobProps {
   /**
    * The CDK pipeline, including its stages and job configuration.
    * Defines the sequence and structure of actions for synthesizing, publishing, and deploying.
    */
   readonly pipeline: PipelineBase;
+
+  /**
+   * Optional configuration settings for individual jobs within the pipeline.
+   *
+   * @remarks
+   * `JobSettings` allow fine-tuning of job-specific behavior, including conditions and
+   * environment configurations that are applied to individual jobs in the pipeline.
+   */
+  readonly jobSettings?: JobSettings;
 
   /**
    * Whether to use a single publisher job for each type of asset.
@@ -82,23 +119,14 @@ export interface PipelineWorkflowProps extends WorkflowProps {
    */
   readonly phases?: PipelinePhases;
 
-  /** Provider for AWS credentials required to interact with AWS services. */
-  readonly awsCredentials: IAwsCredentialsProvider;
-
   /**
-   * Docker credentials required for registry authentication within the workflow.
+   * Container configuration for the build environment.
    *
    * @remarks
-   * Specify one or more `DockerCredentials` instances for authenticating against Docker
-   * registries (such as DockerHub, ECR, GHCR, or custom registries) used in the pipeline.
+   * Specifies settings for the container environment where build actions are executed,
+   * including Docker image, registry authentication, and environment variables.
    */
-  readonly dockerCredentials?: DockerCredentials[];
-
-  /** Overrides for specific action versions in GitHub Actions. */
-  readonly versionOverrides?: Record<string, string>;
-
-  /** Directory where CDK generates CloudFormation templates. */
-  readonly cdkoutDir: string;
+  readonly buildContainer?: ContainerOptions;
 }
 
 /**
@@ -108,9 +136,13 @@ export interface PipelineWorkflowProps extends WorkflowProps {
  * Extends `Workflow` from `github-actions-cdk`, and provides structured job orchestration based on the AWS CDK pipeline graph.
  */
 export class PipelineWorkflow extends Workflow {
-  private readonly pipelineJobProps: PipelineJobProps;
-  private readonly stackOptions: Record<string, StackOptions>;
-  private readonly assetHashMap: Record<string, string> = {};
+  protected readonly jobSettings?: JobSettings;
+  protected readonly runner?: Runner;
+  protected readonly buildContainer?: ContainerOptions;
+  protected readonly phases?: PipelinePhases;
+  protected readonly pipelineJobProps: PipelineJobProps;
+  protected readonly stackOptions: Record<string, StackOptions>;
+  protected readonly assetHashMap: Record<string, string> = {};
 
   /**
    * Initializes a new `PipelineWorkflow`.
@@ -121,6 +153,14 @@ export class PipelineWorkflow extends Workflow {
    */
   constructor(scope: Construct, id: string, props: PipelineWorkflowProps) {
     super(scope, id, props);
+
+    this.jobSettings = props.jobSettings;
+
+    this.runner = props.runner ?? Runner.UBUNTU_LATEST;
+
+    this.buildContainer = props.buildContainer;
+
+    this.phases = props.phases;
 
     this.pipelineJobProps = {
       awsCredentials: props.awsCredentials,
@@ -150,25 +190,13 @@ export class PipelineWorkflow extends Workflow {
           switch (node.data?.type) {
             case "step":
               if (node.data?.isBuildStep && node.data?.step instanceof Synth) {
-                this.createSynthJob(
-                  node.uniqueId,
-                  this.getDependencies(node),
-                  node.data.step,
-                  props.phases?.preBuild,
-                  props.phases?.postBuild,
-                );
+                this.createSynthJob(node.uniqueId, this.getDependencies(node), node.data.step);
               } else if (node.data?.step instanceof StageJob) {
                 this.createStageJob(node.uniqueId, this.getDependencies(node), node.data.step);
               }
               break;
             case "publish-assets":
-              this.createPublishJob(
-                node.uniqueId,
-                this.getDependencies(node),
-                node.data.assets,
-                props.phases?.prePublish,
-                props.phases?.postPublish,
-              );
+              this.createPublishJob(node.uniqueId, this.getDependencies(node), node.data.assets);
               break;
             case "execute":
               this.createDeployJob(node.uniqueId, this.getDependencies(node), node.data.stack);
@@ -187,28 +215,22 @@ export class PipelineWorkflow extends Workflow {
    * @param id - Unique identifier for the synth job.
    * @param needs - List of dependencies for this job.
    * @param synth - Synth step configuration.
-   * @param preBuild - Optional jobs to run before the synth job.
-   * @param postBuild - Optional jobs to run after the synth job.
    */
-  protected createSynthJob(
-    id: string,
-    needs: string[],
-    synth: Synth,
-    preBuild?: IJobPhase,
-    postBuild?: IJobPhase,
-  ): void {
+  protected createSynthJob(id: string, needs: string[], synth: Synth): void {
     new SynthPipelineJob(this, id, {
       name: "Synthesize",
       needs,
+      runner: this.runner,
+      ...this.jobSettings,
       permissions: {
         contents: PermissionLevel.READ,
-        idToken: this.pipelineJobProps.awsCredentials.permissionLevel(),
       },
       installCommands: synth.installCommands,
       commands: synth.commands,
       env: synth.env,
-      preBuild,
-      postBuild,
+      container: this.buildContainer,
+      preBuild: this.phases?.preBuild,
+      postBuild: this.phases?.postBuild,
       ...this.pipelineJobProps,
     });
   }
@@ -220,23 +242,19 @@ export class PipelineWorkflow extends Workflow {
    * @param needs - List of dependencies for this job.
    * @param assets - List of assets to publish.
    */
-  protected createPublishJob(
-    id: string,
-    needs: string[],
-    assets: StackAsset[],
-    prePublish?: IJobPhase,
-    postPublish?: IJobPhase,
-  ): void {
+  protected createPublishJob(id: string, needs: string[], assets: StackAsset[]): void {
     new PublishPipelineJob(this, id, {
       name: `Publish Assets ${id}`,
       needs,
+      runner: this.runner,
+      ...this.jobSettings,
       permissions: {
         contents: PermissionLevel.READ,
         idToken: this.pipelineJobProps.awsCredentials.permissionLevel(),
       },
       assets,
-      prePublish,
-      postPublish,
+      prePublish: this.phases?.prePublish,
+      postPublish: this.phases?.postPublish,
       assetHashMap: this.assetHashMap,
       ...this.pipelineJobProps,
     });
@@ -255,7 +273,9 @@ export class PipelineWorkflow extends Workflow {
     new DeployPipelineJob(this, id, {
       name: `Deploy ${stack.stackArtifactId}`,
       needs,
-      environment: options?.environment,
+      runner: this.runner,
+      ...this.jobSettings,
+      ...options?.jobSettings,
       permissions: {
         contents: PermissionLevel.READ,
         idToken: this.pipelineJobProps.awsCredentials.permissionLevel(),
@@ -278,6 +298,7 @@ export class PipelineWorkflow extends Workflow {
     new StagePipelineJob(this, id, {
       name: job.id,
       needs,
+      runner: this.runner,
       phase: job.props,
       ...job.props,
       ...this.pipelineJobProps,
