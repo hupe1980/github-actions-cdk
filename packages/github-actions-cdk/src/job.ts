@@ -132,6 +132,13 @@ export interface JobProps {
   /** Display name for the job. */
   readonly name?: string;
 
+  /**
+   * Conditional expression to determine if the job should run (equivalent to `if` in GitHub Actions).
+   * Supports GitHub Actions expressions, e.g., `${{ success() }}`.
+   * @example "${{ github.event_name == 'push' }}"
+   */
+  readonly condition?: string;
+
   /** Environment variables for all steps in the job. */
   readonly env?: Record<string, string>;
 
@@ -205,9 +212,9 @@ export class Job extends Component {
   }
 
   public readonly name?: string;
+  public readonly condition?: string;
   public readonly env?: Record<string, string>;
   public readonly defaults?: Defaults;
-  public readonly permissions?: Permissions;
   public readonly environment?: Environment;
   public readonly runsOn: string[] | string;
   public readonly timeoutMinutes?: number;
@@ -219,6 +226,7 @@ export class Job extends Component {
   public readonly requiredChecks?: string[];
 
   private _needs: Set<string>;
+  private _permissions?: Permissions;
   private _outputs?: Record<string, string>;
 
   /**
@@ -233,9 +241,9 @@ export class Job extends Component {
     Object.defineProperty(this, JOB_SYMBOL, { value: true });
 
     this.name = props.name;
+    this.condition = props.condition;
     this.env = props.env;
     this.defaults = props.defaults;
-    this.permissions = props.permissions;
     this.environment = props.environment;
     this.runsOn = props.runsOn ?? "ubuntu-latest";
     this.timeoutMinutes = props.timeoutMinutes;
@@ -247,6 +255,7 @@ export class Job extends Component {
     this.requiredChecks = props.requiredChecks;
 
     this._needs = new Set(props.needs ?? []);
+    this._permissions = props.permissions;
     this._outputs = props.outputs;
 
     this.node.addValidation(new JobValidator(this));
@@ -265,6 +274,16 @@ export class Job extends Component {
   /** Retrieves job dependencies. */
   public get needs(): string[] {
     return Array.from(this._needs);
+  }
+
+  /** Retrieves job permissions. */
+  public get permissions(): Permissions | undefined {
+    return this._permissions;
+  }
+
+  /** Sets job permissions. */
+  public configurePermissions(permissions: Permissions): void {
+    this._permissions = permissions;
   }
 
   /**
@@ -348,6 +367,7 @@ export class Job extends Component {
     return {
       [this.id]: snakeCaseKeys({
         name: this.name,
+        if: this.condition,
         runsOn: this.runsOn,
         env: this.env,
         defaults: this.defaults,

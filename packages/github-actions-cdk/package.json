@@ -41,7 +41,7 @@
     "lint:fix": "biome check --write",
     "test": "jest"
   },
-  "bundleDependencies": ["yaml"],
+  "bundledDependencies": ["yaml"],
   "peerDependencies": {
     "constructs": "^10.4.2"
   },
