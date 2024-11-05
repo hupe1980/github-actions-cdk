@@ -1,3 +1,4 @@
+[![View on Construct Hub](https://constructs.dev/badge?package=%40github-actions-cdk%2Faws-cdk)](https://constructs.dev/packages/@github-actions-cdk/aws-cdk)
 # @github-actions-cdk/aws-cdk
 
 **@github-actions-cdk/aws-cdk** is a TypeScript library for building GitHub Actions pipelines specifically for AWS CDK applications. This library allows developers to define, structure, and automate CI/CD workflows tailored to CDK projects, making it easy to deploy infrastructure through GitHub Actions in a type-safe and modular way.

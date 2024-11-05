@@ -1,4 +1,5 @@
-# @github-actions-cdk/cdktf
+[![View on Construct Hub](https://constructs.dev/badge?package=%40github-actions-cdk%2Fcdktf-provider-aws)](https://constructs.dev/packages/@github-actions-cdk/cdktf-provider-aws)
+# @github-actions-cdk/cdktf-provider-aws
 
 ## Contributing
 

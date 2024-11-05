@@ -1,3 +1,4 @@
+[![View on Construct Hub](https://constructs.dev/badge?package=github-actions-cdk)](https://constructs.dev/packages/github-actions-cdk)
 # 🚧 GitHub Actions CDK
 
 **github-actions-cdk** is a TypeScript library that simplifies the creation and management of GitHub Actions workflows using Constructs. With this library, developers can define workflows in a structured and type-safe manner, making it easier to automate CI/CD pipelines on GitHub. It also includes Python bindings for developers who prefer working in Python.

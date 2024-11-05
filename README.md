@@ -14,9 +14,10 @@ With these libraries, users can define workflows, manage cross-account deploymen
 ## Packages
 
 The monorepo contains libraries tailored for different use cases, each of which has its own README with further details:
-- **@github-actions-cdk/aws-cdk**: Tailored for AWS CDK projects.
-- **@github-actions-cdk/cdktf**: Designed for projects using CDKTF (Cloud Development Kit for Terraform).
-- **github-actions-cdk**: A general-purpose library for creating GitHub Actions workflows with Constructs, available in both TypeScript and Python.
+- [**github-actions-cdk**](./packages/github-actions-cdk/README.md): A general-purpose library for creating GitHub Actions workflows with Constructs, available in both TypeScript and Python.
+- [**@github-actions-cdk/aws-cdk**](./packages/@github-actions-cdk/aws-cdk/README.md): Tailored for AWS CDK projects.
+- [**@github-actions-cdk/cdktf**](./packages/@github-actions-cdk/cdktf/README.md): Designed for projects using CDKTF (Cloud Development Kit for Terraform).
+
 
 ## Getting Started
 

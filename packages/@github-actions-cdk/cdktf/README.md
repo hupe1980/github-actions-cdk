@@ -1,3 +1,4 @@
+[![View on Construct Hub](https://constructs.dev/badge?package=%40github-actions-cdk%2Fcdktf)](https://constructs.dev/packages/@github-actions-cdk/cdktf)
 # @github-actions-cdk/cdktf
 
 ## Contributing

@@ -57,7 +57,7 @@ export class YamlGenerator {
   private formatComment(comment: string): string {
     return comment
       .split("\n")
-      .map((line) => (line ? `# ${line}` : ""))
+      .map((line) => (line ? ` ${line}` : ""))
       .join("\n");
   }
 }
