@@ -1,4 +1,6 @@
-X# 🚧 GitHub Actions CDK Monorepo
+# 🚧 GitHub Actions CDK Monorepo
+[![CI Status](https://github.com/hupe1980/github-actions-cdk/actions/workflows/ci.yml/badge.svg)](https://github.com/hupe1980/github-actions-cdk/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 This monorepo provides a suite of TypeScript libraries designed to simplify the setup, management, and automation of GitHub Actions workflows specifically tailored for AWS CDK and CDKTF applications. Each package is crafted to enable developers to define CI/CD workflows for cloud infrastructure deployments in a modular, type-safe way—ideal for projects leveraging AWS CDK, CDKTF, or custom GitHub Actions.
 
